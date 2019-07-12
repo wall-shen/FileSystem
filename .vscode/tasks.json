@@ -1,0 +1,65 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "g",
+            "type": "shell",
+            "command": "g++",
+            "args": [
+                "-std=c++11",
+                "-pthread",
+                "-g",
+                "src/test.cpp",
+                "-o",
+                "main.exe"
+            ],
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
+            "label": "build",
+            "command": "make",
+            "args": [
+                "default"
+            ],
+            "type": "shell",
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
+            "label": "build-debug",
+            "command": "make",
+            "args": [
+                "debug"
+            ],
+            "type": "shell"
+        },
+        {
+            "label": "clean",
+            "command": "make",
+            "args": [
+                "clean"
+            ],
+            "type": "shell",
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
+            "type": "shell",
+            "label": "g++.exe build active file",
+            "command": "C:\\MinGW\\bin\\g++.exe",
+            "args": [
+                "-g",
+                "${file}",
+                "-o",
+                "${fileDirname}\\${fileBasenameNoExtension}.exe"
+            ],
+            "options": {
+                "cwd": "C:\\MinGW\\bin"
+            }
+        }
+    ]
+}
