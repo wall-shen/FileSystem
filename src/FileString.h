@@ -2,8 +2,8 @@
 #define FILESTRINGH
 
 #include <string>
-#include <string.h>
 #include "FileLoaderTypes.h"
+#include <string.h>
 
 class FString{
     std::string str;

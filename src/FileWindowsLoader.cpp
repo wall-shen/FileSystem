@@ -12,8 +12,6 @@ enum{
 };
 
 FHandle::~FHandle() {}
-
-
 FWindowsHandle::FWindowsHandle(int32 Inhandle, int64 InPos, int64 InSize) 
     : FHandle(InPos, InSize)
     , handle(Inhandle)
@@ -125,7 +123,6 @@ bool FWindowsLoader::FileMove(const char* fileFrom, const char* fileTo){
 bool FWindowsLoader::FileCopy(const char* fileFrom, const char* fileTo){
     if(!FileExists(fileFrom))
         return false;
-    int32 inHandle = open(fileFrom, O_RDONLY | O_BINARY);
     int32 outHandle = open(fileTo, O_WRONLY | O_BINARY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IXUSR);
     uint8 buffer[ReadBufferSize];
     int32 copySize = 0;
