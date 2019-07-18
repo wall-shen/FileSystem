@@ -62,15 +62,19 @@ public:
     }
 
     friend FArchive& operator<<(FArchive& archive, FString& value){
-        int32 strSize = value.GetSize() + 1;
-        archive << strSize;
         if(archive.IsRead()){
+            int32 strSize;
+            archive << strSize;
             char str[strSize];
             archive.Serialize(str, strSize);
             value = str; 
         }
         if(archive.IsWrite()){
-            archive.Serialize(&(value.GetStr()), strSize);
+            int32 strSize = value.GetSize() + 1;
+            archive << strSize;
+            char str[strSize];
+            strcpy(str, value.GetStr().c_str());
+            archive.Serialize(str, strSize);            
         }
         return archive;
     }

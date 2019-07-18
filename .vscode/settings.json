@@ -31,6 +31,8 @@
         "typeinfo": "cpp",
         "utility": "cpp",
         "deque": "cpp",
-        "iostream": "cpp"
+        "iostream": "cpp",
+        "ctime": "cpp",
+        "iomanip": "cpp"
     }
 }

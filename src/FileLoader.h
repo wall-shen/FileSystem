@@ -8,7 +8,9 @@
 #include <io.h>
 
 
+#ifndef DEBUG
 #define DEBUG
+#endif
 #ifdef DEBUG
 #define DEBUG(a) std::cout << a << std::endl
 #else
