@@ -1,17 +1,30 @@
- #include <dirent.h>
- #include <sys/stat.h>
- #include <stdio.h>
- #include <string.h>
- #include <io.h>
- #include <fcntl.h>
- #include <iostream>
- #include "FileLoader.h"
+#include "FileLoader.h"
+
+#ifdef WIN32
+
+#include <dirent.h>
+#include <sys/stat.h>
+#include <stdio.h>
+#include <string.h>
+#include <io.h>
+#include <fcntl.h>
+#include <iostream>
 
 enum{
     ReadBufferSize = 10240
 };
 
-FHandle::~FHandle() {}
+FWindowsLoader* FWindowsLoader::singleFWindowsLoader = nullptr;
+
+FWindowsLoader* FWindowsLoader::GetFWindowsLoader(){
+    if(singleFWindowsLoader == nullptr){
+        static FWindowsLoader staticWinsdowsLoader;
+        singleFWindowsLoader = &staticWinsdowsLoader;
+    }
+    return singleFWindowsLoader;
+}
+
+
 FWindowsHandle::FWindowsHandle(int32 Inhandle, int64 InPos, int64 InSize) 
     : FHandle(InPos, InSize)
     , handle(Inhandle)
@@ -58,7 +71,6 @@ bool FWindowsHandle::Close(){
 }
 
 FWindowsHandle::~FWindowsHandle(){
-    if(handle)
         Close();
 }
 
@@ -123,6 +135,7 @@ bool FWindowsLoader::FileMove(const char* fileFrom, const char* fileTo){
 bool FWindowsLoader::FileCopy(const char* fileFrom, const char* fileTo){
     if(!FileExists(fileFrom))
         return false;
+    int32 inHandle = open(fileFrom, O_RDONLY | O_BINARY);
     int32 outHandle = open(fileTo, O_WRONLY | O_BINARY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IXUSR);
     uint8 buffer[ReadBufferSize];
     int32 copySize = 0;
@@ -229,6 +242,34 @@ void FWindowsLoader::FindFilesRecursively(FArray<FString>& foundFiles, const cha
     }while(_findnext(findHandle, &fileData) == 0);
     _findclose(findHandle);
 }
+
+#endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // // class FileArchive{
 // //     enum{
 // //         MaxBufferSize  = 10240,

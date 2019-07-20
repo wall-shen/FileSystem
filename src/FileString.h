@@ -12,6 +12,10 @@ public:
         str = InStr;
     }
 
+    FString(const char* Instring){
+        str = Instring;
+    }
+
     FString(const FString& InFString){
         str = InFString.str;
     }
@@ -34,6 +38,11 @@ public:
         return *this;
     }
 
+    FString& operator= (const char* InStr){
+        str = InStr;
+        return *this;
+    }
+
     FString& operator=(FString&& InStr){
         str = InStr.str;
         return *this;
@@ -49,6 +58,10 @@ public:
 
     FString operator+ (const char* InStr){
         return FString(str + InStr);
+    }
+
+    friend FString operator+ (const char* InChar, FString InFString){
+        return FString(InChar + InFString.GetStr());
     }
 
     int32 operator== (FString& InStr){
@@ -80,13 +93,37 @@ public:
         return str.find(InStr) == 0 ? true : false;
     }
 
+    // path end with '/'
+    void NormallizePath(){
+        if(str[str.size() -1] != '/')
+            str.append(1, '/');
+    }
+
     void NormalizeFileName(){
         for(int i = 0; i < str.size() ; i++){
-            if(str[i] == '/')
-                str.replace(i, 1, "\\\\");
+            if(str[i] == '\\')
+                if(str[i+1] == '\\'){
+                    str.replace(i, 2, "/");
+                }
+                else{
+                    str.replace(i, 1, "/");
+                }
         }
     }
     
+    FString GetFileName(){
+        int pos = str.rfind('/');
+        FString s = str.substr(pos + 1);
+        return s;
+    }
+
+    // path end with '/' 
+    FString GetPath(){
+        int pos = str.rfind('/');
+        FString s = str.substr(0, pos + 1);
+        return s;
+    }
+
 };
 
 #endif

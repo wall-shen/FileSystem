@@ -27,7 +27,7 @@ CLEAN_LIST := $(TARGET) $(TARGET_DEBUG) $(DISTCLEAN_LIST)
 default: all
 
 $(TARGET): $(OBJ)
-	$(CC) $(CCFLAG) -o $@ $?
+	$(CC) $(CCFLAG)  -o $@ -lz $?
 
 $(OBJ_PATH)/%.o: $(SRC_PATH)/%.cpp
 	$(CC) $(CCOBJFLAG) -o $@ $<

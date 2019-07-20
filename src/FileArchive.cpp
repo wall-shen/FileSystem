@@ -23,6 +23,7 @@ bool FWriteArchive::Seek(int64 inPos){
 }
 
 bool FWriteArchive::Close(){
+    Flush();
     if(!FlushBuffer())
         return false;
     if(!CloseHandle())
@@ -32,7 +33,7 @@ bool FWriteArchive::Close(){
 
 bool FWriteArchive::FlushBuffer(){
     if(bufferCount <= 0 || bufferCount > bufferSize)
-        return false;
+        return true;
     if(!WriteToHandle(buffer, bufferCount))
         return false;
     bufferCount = 0;
@@ -80,25 +81,31 @@ bool FWriteArchive::WriteToHandle(const uint8* pValue, int64 length){
 }
 
 void FWriteArchive::Serialize(void* pValue, int64 length){
-    pos += length;
-    if(!pValue || length <= 0)
-        return;
-    if(length > bufferSize - bufferCount){
+    // pos += length;
+    // if(!pValue || length <= 0)
+    //     return;
+    // if(length >= bufferSize){
+    //     FlushBuffer();
+    //     if(!WriteToHandle((uint8*)pValue, length))
+    //         DEBUG("Write to Handle failed");
+    // }
+    // else{
+    //     int64 copySize;
+    //     while(length > (copySize = bufferSize - bufferCount)){
+    //         memcpy(buffer, pValue, copySize);
+    //         bufferCount += copySize;
+    //         pValue = (uint8*)pValue + copySize;
+    //         length -= copySize;
+    //         FlushBuffer();
+    //     }
+    //     if(length > 0){
+    //         memcpy(buffer + bufferCount, pValue, length);
+    //         bufferCount += length;
+    //     }
+    // }
+    if(length > 0){
         if(!WriteToHandle((uint8*)pValue, length))
-            DEBUG("Write to Handle failed");
-    }
-    else{
-        int64 copySize;
-        while(length > (copySize = bufferSize - bufferCount)){
-            memcpy(buffer, pValue, copySize);
-            pValue = (uint8*)pValue + copySize;
-            length -= copySize;
-            FlushBuffer();
-        }
-        if(length > 0){
-            memcpy(buffer, pValue, length);
-            bufferCount += length;
-        }
+        DEBUG("Write to Handle failed");
     }
 }
 
@@ -173,33 +180,38 @@ void FReadArchive::Serialize(void* pValue, int64 length){
         DEBUG("FReadArchive::Serialize out of range of file!");
         return;
     }
-    while(length > 0){
-        int64 copySize = pos >=  bufferPos ? Min(length, bufferPos + bufferCount - pos) : -1;
-        if(copySize <= 0){
-            if(length > bufferSize){
-                bool result = ReadFromHandle((uint8*)pValue, length);
-                if(!result){
-                    DEBUG("FReadArchive::Serialize ReadFromHanle failed!");
-                    return;
-                }
-                pos += length;
-                return;
-            }
-            if(!PreCache(bufferSize - 1)){
-                DEBUG("FReadArchive::Serialize PreCache failed!");
-                return;
-            }
-            copySize = Min(length, bufferPos + bufferSize - pos);
-            if( copySize <= 0){
-                DEBUG("FReadArchive::Serialize there is something worong!");
-            }
-        }
-        memcpy(pValue, buffer, copySize);
-        pValue = (uint8*)pValue + copySize;
-        length -= copySize;
-        pos += copySize;
-    }
+    // while(length > 0){
+    //     int64 copySize = pos >=  bufferPos ? Min(length, bufferPos + bufferCount - pos) : -1;
+    //     if(copySize <= 0){
+    //         if(length > bufferSize){
+    //             bool result = ReadFromHandle((uint8*)pValue, length);
+    //             if(!result){
+    //                 DEBUG("FReadArchive::Serialize ReadFromHanle failed!");
+    //                 return;
+    //             }
+    //             pos += length;
+    //             return;
+    //         }
+    //         if(!PreCache(bufferSize - 1)){
+    //             DEBUG("FReadArchive::Serialize PreCache failed!");
+    //             return;
+    //         }
+    //         copySize = Min(length, bufferPos + bufferSize - pos);
+    //         if( copySize <= 0){
+    //             DEBUG("FReadArchive::Serialize there is something worong!");
+    //         }
+    //     }
+    //     memcpy(pValue, buffer, copySize);
+    //     pValue = (uint8*)pValue + copySize;
+    //     length -= copySize;
+    //     pos += copySize;
+    // }
 
+    bool result = ReadFromHandle((uint8*)pValue, length);
+    if(!result){
+        DEBUG("FReadArchive::Serialize ReadFromHanle failed!");
+        return;
+    }
 }
 
 bool FReadArchive::SeekHandle(int64 inPos){

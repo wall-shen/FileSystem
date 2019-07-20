@@ -7,8 +7,12 @@
 #include <iostream>
 #include <io.h>
 
+#define LINUX
 
+#ifndef DEBUG
 #define DEBUG
+#endif
+
 #ifdef DEBUG
 #define DEBUG(a) std::cout << a << std::endl
 #else
@@ -60,7 +64,7 @@ public:
 
     virtual bool Close() = 0;
     
-    virtual ~FHandle();
+    virtual ~FHandle(){}
 };
 
 class FWindowsHandle : public FHandle{
@@ -74,6 +78,19 @@ public:
     virtual bool Flush();
     virtual bool Close();
     virtual ~FWindowsHandle();
+};
+
+class FLinuxHandle : public FHandle{
+    int32 handle;
+public:
+    FLinuxHandle(int32 Inhandle, int64 InPos, int64 InSize);
+    virtual int64 Read(uint8* inBuffer, int64 bytesToRead);
+    virtual int64 Write(const uint8* outBrffer, int64 bytesToWrite);
+    virtual bool Seek(int64 newPosition);
+    virtual bool SeekFromEnd(int64 newPosition);
+    virtual bool Flush();
+    virtual bool Close();
+    virtual ~FLinuxHandle();
 };
 
 class FPhysicalLoader;
@@ -192,7 +209,11 @@ public:
 
 
 class FLinuxLoader : public FPhysicalLoader{
+private:
+    FLinuxLoader(){}
+    static FLinuxLoader* singleFLinuxLoader;
 public:
+    static FLinuxLoader* GetFWindowsLoader();
 
     virtual int64 FileSize(const char* fileName);
 

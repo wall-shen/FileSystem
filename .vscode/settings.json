@@ -31,7 +31,13 @@
         "typeinfo": "cpp",
         "utility": "cpp",
         "deque": "cpp",
-        "iostream": "cpp"
-    },
-    "C_Cpp.errorSquiggles": "Disabled"
+        "iostream": "cpp",
+        "ctime": "cpp",
+        "iomanip": "cpp",
+        "C_Cpp.errorSquiggles": "Enabled",
+        "cstdarg": "cpp",
+        "cstring": "cpp",
+        "map": "cpp",
+        "string": "cpp"
+    }
 }

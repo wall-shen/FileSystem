@@ -5,7 +5,15 @@
 #include "FileArchive.h"
 #include <map>
 
+enum{
+    NormalFlag   = 0x00,
+    DeletedFlag  = 0x01,
+    DownloadFlag = 0x02
+};
+
 class PakInfo{
+public:
+    friend class PakFile;
     enum{
         PkgMigic = 0xACD19C0D,
     };
@@ -14,13 +22,14 @@ class PakInfo{
     // size of index region
     int64 indexSize;
     uint32 magic;
+    uint32 version;
 
 public:
-    PakInfo(int64 InIndexOffset = -1, int64 InIndexSize = 0)
+    PakInfo(int64 InIndexOffset = 0, int64 InIndexSize = 0)
         : indexOffset(InIndexOffset)
         , indexSize(InIndexSize)
         , magic(PkgMigic){
-        
+        indexOffset = sizeof(int64) + sizeof(int64) + sizeof(uint32);
     }
 
     int64 GetIndexOffset() { return indexOffset; }
@@ -28,14 +37,18 @@ public:
     int64 GetIndexSize() { return indexSize; }
 
     uint64 GetSerializedSize(){
-        uint64 size = sizeof(indexOffset) + sizeof(indexSize) + sizeof(magic);
+        uint64 size = sizeof(indexOffset) + sizeof(indexSize) + sizeof(magic) + sizeof(version);
         return size;
     }
 
     void Serialize(FArchive& ar);
+
+    void Print();
 };
 
 class FileBlock{
+public:
+    friend class PakFile;
     // offset of block start 
     uint64 start; 
     // offset of block end
@@ -43,7 +56,7 @@ class FileBlock{
     // // point to next Block
     // FileBlock next;
 public:
-    FileBlock(uint64 InStart, uint64 InEnd)
+    FileBlock(uint64 InStart = 0, uint64 InEnd = 0)
         : start(InStart)
         , end(InEnd){}
     uint64 GetStart(){ return start; }
@@ -54,18 +67,22 @@ public:
         ar << start;
         ar << end;
     }
+    void Print();
 };
 
 class PakEntry{
-    enum{
-        NormalFlag  = 0x00,
-        DeletedFlag = 0x01
-    };
+public:
+    friend class PakFile;
+ 
+    uint32 version;
+    uint32 hashOne;
+    uint32 hashTwo;
     uint64 compressSize;
     uint64 uncompressSize;
     uint32 compressMethod;
     uint64 offset;
     FArray<FileBlock> blockList;
+    uint64 maxBlockSize;
     uint32 fBSize;
     uint8 flag;
 
@@ -74,9 +91,8 @@ public:
         : uncompressSize(0)
         , compressMethod(0)
         , fBSize(0)
-        , flag(NormalFlag){
-
-        }
+        , flag(NormalFlag)
+        {}
     int64 GetCompressSize() const { return compressSize; }
     int64 GetUnCompressSize() const { return uncompressSize; }
     int64 GetOffset() const { return offset; }
@@ -85,35 +101,66 @@ public:
     void Serialize(FArchive& ar);
     void SetFlag(uint8 inFlag) { flag = inFlag; };
     int32 getFlag() const { return flag; }
+    void Print();
 };
 
-typedef std::map<FString, std::map<FString, int64>> PakIndex;
+/**
+ * first                size of block
+ * second -> first      offset of block in blockList
+ * second -> second     offset of entry in files
+ */
+typedef std::multimap<uint64, std::pair<int32, int32>> DeleteList;
+
+/**
+ *  first               HashOne
+ *  second -> first     HashTwo
+ *  second -> second    offset of entry in files
+ */
+typedef std::multimap<uint32, std::pair<uint32, int32>> PakIndex;
 class PakFile{
-private:
+//private::
+public:
     FString pakFileName;
     PakInfo info;
+    DeleteList deleteList;
     PakIndex index;
     FArray<PakEntry> files;
     int32 entryNum;
     FString mountPoint;
-    uint32* fileNameHash;
-    uint32* fileNameHashIndex;
     int64 size;
     bool isValid;
 
 public:
-    PakFile(){};
+    PakFile()
+        : mountPoint("/")
+        , size(0)
+        , entryNum(0)
+        , isValid(false)
+    {}
+    void initialize(FArchive&);
     FString& GetFileName() { return pakFileName; }
     int64 GetSize() { return size; }
     PakIndex& GetIndex() { return index; }
     void SetMountPoint(const char* path){ mountPoint = path; }
+    uint32 GetVersion() { return info.version; }
+    void SetVersion(uint32 InVersion) { info.version = InVersion; }
     FString& GetMountPoint() { return mountPoint; }
+    bool Remove(const char* fileName);
+    int64 Read(FHandle* handle, PakEntry&, uint8* inBuffer);
+    int64 Write(FHandle* handle, const char* fileName, const uint8* outBrffer, int64 bytesToWrite, int64 wholeFileSize);
     void FindFiles(FArray<FString> foundfiles, const char* directory, const char* extension);
     void FindFilesRecursively(FArray<FString> foundfiles, const char* directory, const char* extension);
-    bool FindFile(const char* fileName, PakEntry* pakEntry);
+    bool FindFile(const char* fileName, PakEntry& pakEntry);
     PakInfo& GetInfo(){ return info; }
+    int32 GetEntryNum() {return entryNum; }
     void Serialize(FArchive& archive);
+    void Print();
     ~PakFile(){}
+
+private:
+    void LoadIndex(FArchive&);
+    bool IsValid() { return isValid; }
+    void SetIsValid(bool InFlag) { isValid = InFlag; }
 };
 
 class FPakHandle : public FHandle{
