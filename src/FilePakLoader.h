@@ -70,6 +70,7 @@ public:
     void Print();
 };
 
+typedef FArray<FileBlock> BlockList;
 class PakEntry{
 public:
     friend class PakFile;
@@ -80,22 +81,28 @@ public:
     uint64 compressSize;
     uint64 uncompressSize;
     uint32 compressMethod;
-    uint64 offset;
-    FArray<FileBlock> blockList;
+    BlockList blockList;
     uint64 maxBlockSize;
     uint32 fBSize;
     uint8 flag;
 
 public:
-    PakEntry()
-        : uncompressSize(0)
-        , compressMethod(0)
-        , fBSize(0)
-        , flag(NormalFlag)
+    PakEntry() {}
+    PakEntry(uint32 inVersion, uint32 InHashOne, uint32 InHashTwo, uint64 IncompressSize, uint64 InUncompressSize, uint32 InCompressMethod, \
+        BlockList& InBlockList, uint64 InMaxBlockSize, uint32 InFbSize,uint8 Inflag = NormalFlag)
+        : version(inVersion)
+        , hashOne(InHashOne)
+        , hashTwo(InHashTwo)
+        , compressSize(IncompressSize)
+        , uncompressSize(InUncompressSize)
+        , compressMethod(InCompressMethod)
+        , blockList(InBlockList)
+        , maxBlockSize(InMaxBlockSize)
+        , fBSize(InFbSize)
+        , flag(Inflag)
         {}
     int64 GetCompressSize() const { return compressSize; }
     int64 GetUnCompressSize() const { return uncompressSize; }
-    int64 GetOffset() const { return offset; }
     int64 GetSerializedSize();
     FArray<FileBlock>& GetFileBlockList() { return blockList; };
     void Serialize(FArchive& ar);
@@ -147,7 +154,7 @@ public:
     FString& GetMountPoint() { return mountPoint; }
     bool Remove(const char* fileName);
     int64 Read(FHandle* handle, PakEntry&, uint8* inBuffer);
-    int64 Write(FHandle* handle, const char* fileName, const uint8* outBrffer, int64 bytesToWrite, int64 wholeFileSize);
+    int64 Write(FHandle* handle, const char* fileName, const uint8* outBrffer, int64 bytesToWrite);
     void FindFiles(FArray<FString> foundfiles, const char* directory, const char* extension);
     void FindFilesRecursively(FArray<FString> foundfiles, const char* directory, const char* extension);
     bool FindFile(const char* fileName, PakEntry& pakEntry);
@@ -158,7 +165,9 @@ public:
     ~PakFile(){}
 
 private:
+    bool AddEntryToFiles(const char* fileName, uint64 compressSize, uint64 unCompressSize, uint32 compressMethod, BlockList& blockList);
     void LoadIndex(FArchive&);
+    int64 WriteToBlock(FHandle* handle, uint64 startPos, const uint8* outBuffer, int64 byteToWrite);
     bool IsValid() { return isValid; }
     void SetIsValid(bool InFlag) { isValid = InFlag; }
 };

@@ -1,6 +1,7 @@
 #include "FilePakLoader.h"
 #include "Hash.h"
 #include <iomanip>
+#include <zlib.h>
 
 void PakInfo::Serialize(FArchive& ar){
     ar << magic;
@@ -26,7 +27,7 @@ void FileBlock::Print(){
 
 int64 PakEntry::GetSerializedSize(){
     int64 retSize = sizeof(version) + sizeof(hashOne) + sizeof(hashTwo) + sizeof(compressSize) + sizeof(uncompressSize) + sizeof(compressMethod) + \
-        sizeof(offset) + sizeof(maxBlockSize) + sizeof(fBSize) + sizeof(flag);
+         + sizeof(maxBlockSize) + sizeof(fBSize) + sizeof(flag);
     for(int i = 0; i < blockList.Size(); i++){
         retSize += blockList[i].GetSerializeSize();
     }
@@ -40,7 +41,6 @@ void PakEntry::Serialize(FArchive& ar){
     ar << compressSize;
     ar << uncompressSize;
     ar << compressMethod;
-    ar << offset;
     ar << maxBlockSize;
     ar << fBSize;
     ar << flag;
@@ -65,7 +65,6 @@ void PakEntry::Print(){
     std::cout << std::left << std::setw(15) << "compressSize" << compressSize << std::endl;
     std::cout << std::left << std::setw(15) << "uncompressSize" << uncompressSize << std::endl;
     std::cout << std::left << std::setw(15) << "compressMethod" << compressMethod << std::endl;
-    std::cout << std::left << std::setw(15) << "offset" << offset << std::endl;
     std::cout << std::left << std::setw(15) << "fbSize" << fBSize << std::endl;
     std::cout << std::left << std::setw(15) << "flag" << flag << std::endl;
     std::cout << std::left << std::setw(15) << "maxBlockSize" << maxBlockSize << std::endl;
@@ -107,8 +106,18 @@ bool PakFile::Remove(const char* fileName){
     auto range = index.equal_range(hashOne);
     for(auto it = range.first ; it != range.second; it++){
         if((it -> second).first == hashTwo){
+            // set flag
             files[(it -> second).second].SetFlag(DeletedFlag);
-            isValid = false;
+
+            // add deleteList
+            BlockList& tempBlockList = files[(it -> second).second].blockList;
+            for(int i = 0; i < tempBlockList.Size(); i++){
+                deleteList.insert(std::make_pair(tempBlockList[i].GetSize(), std::make_pair(i, (it -> second).second)));
+            }
+
+            // remove from fileIndex
+            index.erase(it);
+            entryNum--;
             return true;
         }
     }
@@ -138,15 +147,127 @@ int64 PakFile::Read(FHandle* handle, PakEntry& pakEntry, uint8* inBuffer){
     }
     return copySize;
 }
-int64 PakFile::Write(FHandle* handle, const char* fileName, const uint8* outBrffer, int64 bytesToWrite, int64 wholeFileSize){
-    if(!handle || !fileName || !outBrffer || bytesToWrite < 0)
+
+int64 PakFile::WriteToBlock(FHandle* handle, uint64 startPos, const uint8* outBuffer, int64 byteToWrite){
+    if(!handle || startPos < 0 || !outBuffer || byteToWrite < 0)
         return -1;
-    handle -> Seek(GetInfo().GetIndexOffset());
-    int writeSize = handle -> Write(outBrffer, bytesToWrite);
-    if(writeSize != bytesToWrite)
+    if(!(handle -> Seek(startPos)))
         return -1;
+    uint64 copySize = handle -> Write(outBuffer, byteToWrite);
+    if(copySize != byteToWrite)
+        return -1;
+    return copySize;
+}
+
+bool PakFile::AddEntryToFiles(const char* fileName, uint64 compressSize, uint64 unCompressSize, uint32 compressMethod, BlockList& blockList){
+    if(!fileName || compressSize < 0 || unCompressSize < 0 || CompressMethod < 0)
+        return false;
     uint32 hashOne = Crc::MemCrc32(fileName, strlen(fileName), Crc::crcValueOne);
     uint32 hashTwo = Crc::MemCrc32(fileName, strlen(fileName), Crc::crcValueTwo);
+    uint64 maxBlockSize = 0;
+    for(int i = 0; i < blockList.Size(); i++){
+        if(blockList.Size() > maxBlockSize)
+            maxBlockSize = blockList.Size();
+    }
+    files.PushBack(PakEntry(info.version, hashOne, hashTwo, compressSize, unCompressSize, compressMethod, blockList, maxBlockSize, blockList.Size()));
+}
+
+int64 PakFile::Write(FHandle* handle, const char* fileName, const uint8* outBuffer, int64 bytesToWrite){
+    if(!handle || !fileName || !outBuffer || bytesToWrite < 0)
+        return -1;
+    Remove(fileName);
+
+    // compress data
+    int err;
+    uint64 compressSize = bytesToWrite;
+    uint8 compressBuffer[bytesToWrite];
+    err = compress(compressBuffer, &compressSize, outBuffer, bytesToWrite);
+    if(err != Z_OK){
+        DEBUG("compress error : " << err);
+        return -1;
+    }
+
+    //write data
+    BlockList newEntryBlockList;
+    auto deleteListIt = deleteList.lower_bound(compressSize);
+    if(deleteListIt != deleteList.end()){
+
+        /**
+         * areaPos -> first     offset of block in blockList of entry
+         * areaPos -> second    offset of entry in files
+         */
+        auto areaPos = deleteListIt -> second;
+        FileBlock& targetBlock = files[areaPos.second].blockList[areaPos.first];
+        int CopySize = WriteToBlock(handle, targetBlock.start, compressBuffer, compressSize);
+        newEntryBlockList.PushBack(targetBlock);
+
+        if(CopySize != compressSize){
+            DEBUG("write error : " << targetBlock.start << " -> " << targetBlock.end);
+            return -1;
+        }
+
+        if(compressSize == targetBlock.GetSize()){
+            deleteList.erase(deleteListIt);
+            if(files[areaPos.second].blockList.Size() == 1){
+                files.Erase(areaPos.second);
+            }
+            else{
+                files[areaPos.second].blockList.Erase(areaPos.first);
+            }
+        }
+        else{
+            deleteList.erase(deleteListIt);
+            files[areaPos.second].blockList[areaPos.first].start += compressSize;
+            deleteList.insert(std::make_pair(files[areaPos.second].blockList[areaPos.first].GetSize(), std::make_pair(areaPos.first, areaPos.second)));
+        }
+
+    }
+    else{
+        /**
+         * areaPos -> first     offset of block in blockList of entry
+         * areaPos -> second    offset of entry in files
+         */
+        auto areaPos = (--deleteListIt) -> second;
+        FileBlock& targetBlock = files[areaPos.second].blockList[areaPos.first];
+        uint64 CopySize = WriteToBlock(handle, targetBlock.start, compressBuffer, targetBlock.GetSize());
+        newEntryBlockList.PushBack(targetBlock);
+        uint64 leftToWrite = compressSize - CopySize;
+
+        if(CopySize != targetBlock.GetSize()){
+            DEBUG("write error : " << targetBlock.start << " -> " << targetBlock.end);
+            return -1;
+        }
+
+        deleteList.erase(deleteListIt);
+        if(files[areaPos.second].blockList.Size() == 1){
+            files.Erase(areaPos.second);
+        }
+        else{
+            files[areaPos.second].blockList.Erase(areaPos.first);
+        }
+
+        // write to new block
+        uint64 copySizeTwo = WriteToBlock(handle, GetInfo().GetIndexOffset(), compressBuffer + CopySize, leftToWrite);
+        newEntryBlockList.PushBack(FileBlock(GetInfo().GetIndexOffset(), GetInfo().GetIndexOffset() + copySizeTwo));
+        if(copySizeTwo != leftToWrite){
+            DEBUG("write error : " << GetInfo().GetIndexOffset() << " -> " << (GetInfo().GetIndexOffset() + copySizeTwo));
+            return -1;
+        }
+
+        info.indexOffset = GetInfo().GetIndexOffset() + copySizeTwo;
+    }
+
+    if(!AddEntryToFiles(fileName, compressSize, bytesToWrite, 0, newEntryBlockList))
+        return -1;
+    entryNum += 1;
+    return bytesToWrite;
+
+
+    handle -> Seek(GetInfo().GetIndexOffset());
+    int writeSize = handle -> Write(outBuffer, bytesToWrite);
+    if(writeSize != bytesToWrite)
+        return -1;
+    
 
     // construct PakEntry
     PakEntry tempEntry;
