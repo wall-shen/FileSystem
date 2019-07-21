@@ -141,9 +141,14 @@ bool PakFile::FindFile(const char* fileName, PakEntry& pakEntry){
 
 int64 PakFile::Read(FHandle* handle, PakEntry& pakEntry, uint8* inBuffer){
     int copySize = 0;
+    uint8 tempBuffer[pakEntry.maxBlockSize]
     for(int i = 0; i < pakEntry.fBSize; i++){
         handle -> Seek((pakEntry.blockList)[i].GetStart());
-        handle -> Read(inBuffer + copySize, (pakEntry.blockList)[i].GetSize());
+        uint8 tempCompressBuffer[(pakEntry.blockList)[i].GetSize()];
+        handle -> Read(tempCompressBuffer, (pakEntry.blockList)[i].GetSize());
+        uint64 unCompSize = pakEntry.maxBlockSIze;
+        uncompress(tempBuffer, unCompSize, tempCompressBuffer, pakEntry.blockList)[i].GetSize());
+        memcpy(inBuffer, tempBuffer, unCompSize);
     }
     return copySize;
 }
@@ -262,33 +267,6 @@ int64 PakFile::Write(FHandle* handle, const char* fileName, const uint8* outBuff
     entryNum += 1;
     return bytesToWrite;
 
-
-    handle -> Seek(GetInfo().GetIndexOffset());
-    int writeSize = handle -> Write(outBuffer, bytesToWrite);
-    if(writeSize != bytesToWrite)
-        return -1;
-    
-
-    // construct PakEntry
-    PakEntry tempEntry;
-    FileBlock tempBlock;
-    files.PushBack(tempEntry);
-    files[files.Size() - 1].version = info.version;
-    files[files.Size() - 1].hashOne = hashOne;
-    files[files.Size() - 1].hashTwo = hashTwo;
-    files[files.Size() - 1].compressSize = 0;
-    files[files.Size() - 1].uncompressSize = bytesToWrite;
-    files[files.Size() - 1].compressMethod = 0;
-    files[files.Size() - 1].offset = GetInfo().GetIndexOffset();
-    files[files.Size() - 1].fBSize = 1;
-    files[files.Size() - 1].flag = 0x00;
-    files[files.Size() - 1].blockList.PushBack(tempBlock);
-    files[files.Size() - 1].blockList[0].start = GetInfo().GetIndexOffset();
-    files[files.Size() - 1].blockList[0].end = GetInfo().GetIndexOffset() + bytesToWrite;
-
-    info.indexOffset = files[files.Size() - 1].blockList[0].end;
-    entryNum += 1;
-    return bytesToWrite;
 }
 
 void PakFile::Serialize(FArchive& archive){
