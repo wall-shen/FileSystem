@@ -5,18 +5,24 @@
 #include "FileString.h"
 #include "FileArray.h"
 #include <iostream>
-#include <io.h>
 
 #define LINUX
 
-#ifndef DEBUG
-#define DEBUG
+#ifndef TEST
+#define TEST
 #endif
 
-#ifdef DEBUG
+#ifdef TEST
 #define DEBUG(a) std::cout << a << std::endl
 #else
 #define DEBUG(a)
+#endif
+
+#ifdef TEST
+#define CMP_CHECK(a, b, message)    if(a != b) std::cout << message << std::endl;
+                                            
+#else
+#define CMP_CHECK(a, b, message)
 #endif
 
 class FHandle{
@@ -102,10 +108,15 @@ protected:
 public:
     FLoader(){}
     // Get fileLoad lower than this file
-    virtual FLoader* GetLowerLoader() = 0;
+    virtual FLoader* GetLowerLoader(){ return lowerFloader; }
 
     // Set fileLoad lower than this file
-    virtual bool SetLowerLoader(FLoader* wrappedLoader) = 0;
+    virtual bool SetLowerLoader(FLoader* wrappedLoader){
+        if(!wrappedLoader)
+            return false;
+        lowerFloader = wrappedLoader;
+        return true;
+    }
     
     virtual int64 FileSize(const char* fileName) = 0;
 
@@ -241,4 +252,5 @@ public:
 
     virtual ~FLinuxLoader(){ }
 };
+
 #endif

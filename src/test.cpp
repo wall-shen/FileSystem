@@ -5,6 +5,7 @@
 #include "FileArray.h"
 #include "FilePakLoader.h"
 #include "Hash.h"
+#include "FileInternetLoader.h"
 #include <iostream>
 #include <dirent.h>
 #include <stdio.h>
@@ -13,48 +14,72 @@
 #include <zlib.h>
 using namespace std;
 
-#ifndef ZLIB_WINAPI
-#define ZLIB_WINAPI
-#endif
-
-#pragma comment(lib,"D:/code/PkgFile/src/zlibwapi.lib")
 
 int main(){
-   FLinuxLoader* loader = FLinuxLoader::GetFWindowsLoader();
-   FHandle* handle = loader -> OpenWrite("/home/wall/data/test.pak", false);
-   FWriteArchive* wArchive = new FWriteArchive(handle, "12", 0);
+   char q[500] = {'v', 'g', 'r', 'e', 'w'};
+   for(int j =0 ; j < 5; j++){
+      for(int i = 0; i < 100; i ++){
+         q[i+ 100*j] = 20+i;
+      }
+   }
 
-   FHandle* readHandle = loader -> OpenRead("/home/wall/data/test.pak");
-   FReadArchive* rArchive = new FReadArchive(readHandle, "/home/wall/data/test.pak", readHandle -> Size());
+   FPhysicalLoader* loader = FLinuxLoader::GetFWindowsLoader();
+   FHandle* handle = loader -> OpenWrite("/home/wall/data/test.pak", false);
+   FWriteArchive* wArchive = new FWriteArchive(handle, "/home/wall/data/test.pak", 0);
+   
+   Resume resume(loader, "wall", 500, 1);
+   uint64 pos = resume.GetPos();
+   DEBUG("write start with pos : " << pos);
+   if(pos < resume.GetSize()){
+      pos += resume.Write((uint8*)q + pos, 100);
+   }
+   /**
+    * Resume test
+    */
+
+
    /**
     * PakFile Write test
     */
-   PakFile pakFile;
-   pakFile.Serialize(*rArchive);
-   char a[4] = {'q', 'b', 'c', 'd'};
-   char c[3] = {'1', '2', '3'};
-   pakFile.Write(handle, "123", (uint8*)a, 4);
-   pakFile.Write(handle, "456", (uint8*)c, 3);
-   pakFile.Serialize(*wArchive);
-   // cout << "origin indexoffset is " << pakFile.info.GetIndexOffset() << endl; 
-   // cout << "origin indexSize is " << pakFile.info.GetIndexSize() << endl; 
- 
-   wArchive -> Flush();
+   // PakFile pakFile;
 
+   // char a[4] = {'q', 'b', 'c', 'd'};
+   // char c[3] = {'1', '2', '3'};
+   // pakFile.SetVersion(1);
+   // pakFile.Write(handle, "123", (uint8*)a, 4);
+   // pakFile.Write(handle, "456", (uint8*)c, 3);
 
-   /**
-    * pakFile Read test
-    */
-   PakFile pakFile1;
-   pakFile1.initialize(*rArchive);
-   PakEntry pakEntry;
-   pakFile1.FindFile("123", pakEntry);
-   uint8 p[4];
-   pakFile1.Read(readHandle, pakEntry, p);
-   pakFile1.Print();
-   for(int i = 0; i < 4; i++){
-      cout << *(p+i);
-   }
+   // pakFile.Serialize(*wArchive);
+
+   // wArchive -> Flush();
+
+   // FHandle* readHandle = loader -> OpenRead("/home/wall/data/test.pak");
+   // FReadArchive* rArchive = new FReadArchive(readHandle, "/home/wall/data/test.pak", readHandle -> Size());
+
+   // /** 
+   //  * pakFile Read test
+   //  */
+   // PakFile pakFile1;
+   // pakFile1.initialize(*rArchive);
+   // PakEntry pakEntry;
+   // pakFile1.Remove("123");
+   // char q[10000] = {'v', 'g', 'r', 'e', 'w'};
+   // for(int j =0 ; j < 100; j++){
+   // for(int i = 0; i < 100; i ++){
+   //    q[i+ 100*j] = 20+i;
+   // }
+   // }
+   // pakFile1.Write(handle, "098", (uint8*)q, 10000);
+   // handle -> Flush();
+   // pakFile1.FindFile("098", pakEntry);
+   // uint8 p[10000];
+   // int readSize = pakFile1.Read(readHandle, pakEntry, p);
+   // DEBUG("read size : " << readSize);
+   // pakFile1.Print();
+   // for(int i = 0; i < 10000; i++){
+   //    cout << *(p+i);
+   // }
+
 
 
    /**
@@ -152,7 +177,7 @@ int main(){
     //     cerr << "compess error: " << err << '\n';
     //     exit(1);
     // }
-    // cout << "orignal size: " << len
+    // cout << "orignal size: " << len 
     //      << " , compressed size : " << comprLen << '\n';
     // strcpy((char*)uncompr, "garbage");
     // err = uncompress(uncompr, &uncomprLen, compr, comprLen);

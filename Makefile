@@ -1,5 +1,5 @@
 CC := g++
-CCFLAG := -std=c++14
+CCFLAG := -std=c++14 -lz
 DBGFLAG := -g
 CCOBJFLAG := $(CCFLAG) -c
 
@@ -27,7 +27,7 @@ CLEAN_LIST := $(TARGET) $(TARGET_DEBUG) $(DISTCLEAN_LIST)
 default: all
 
 $(TARGET): $(OBJ)
-	$(CC) $(CCFLAG)  -o $@ -lz $?
+	$(CC) $(CCFLAG)  -o $@ $?
 
 $(OBJ_PATH)/%.o: $(SRC_PATH)/%.cpp
 	$(CC) $(CCOBJFLAG) -o $@ $<
@@ -36,7 +36,7 @@ $(DBG_PATH)/%.o: $(SRC_PATH)/%.cpp
 	$(CC) $(CCOBJFLAG) $(DBGFLAG) -o $@ $<
 
 $(TARGET_DEBUG): $(OBJ_DEBUG)
-	$(CC) $(CCFLAG) $(DBGFLAG) $? -o $@
+	$(CC) $(CCFLAG) $(DBGFLAG) $? -o  $@
 
 .PHONY: all
 all: $(TARGET)

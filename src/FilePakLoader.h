@@ -29,7 +29,7 @@ public:
         : indexOffset(InIndexOffset)
         , indexSize(InIndexSize)
         , magic(PkgMigic){
-        indexOffset = sizeof(int64) + sizeof(int64) + sizeof(uint32);
+        indexOffset = sizeof(indexOffset) + sizeof(indexSize) + sizeof(magic) + sizeof(version);
     }
 
     int64 GetIndexOffset() { return indexOffset; }
@@ -145,7 +145,8 @@ public:
         , isValid(false)
     {}
     void initialize(FArchive&);
-    FString& GetFileName() { return pakFileName; }
+    FString& 
+    GetFileName() { return pakFileName; }
     int64 GetSize() { return size; }
     PakIndex& GetIndex() { return index; }
     void SetMountPoint(const char* path){ mountPoint = path; }
@@ -188,6 +189,7 @@ public:
     virtual bool Close();
     virtual ~FPakHandle();
 };
+
 
 class FPakLoader : public FLoader{
 private:
