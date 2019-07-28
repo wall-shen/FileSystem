@@ -1,6 +1,6 @@
 #include "FileLoader.h"
 
-#ifdef WIN32
+#ifdef WINDOWS
 
 #include <dirent.h>
 #include <sys/stat.h>

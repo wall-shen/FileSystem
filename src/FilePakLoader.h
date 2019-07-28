@@ -192,9 +192,12 @@ public:
 
 
 class FPakLoader : public FLoader{
-private:
+// private:
+public:
     FArray<PakFile> pakFiles;
 public:
+    FPakLoader(const char* defaultDir = PAKLOADER_DIRECTORY);
+
     // Get fileLoad lower than this file
     virtual FLoader* GetLowerLoader() { return lowerFloader;}
 
@@ -257,5 +260,7 @@ public:
      * @param extension     file filter
      */
     virtual void FindFilesRecursively(FArray<FString>& foundFiles, const char* directory, const char* extension);
+
+    virtual ~FPakLoader();
 };
 #endif

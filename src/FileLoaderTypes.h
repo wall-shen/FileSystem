@@ -1,5 +1,10 @@
 #ifndef FILELOADERTYPESH
 #define FILELOADERTYPESH
+
+#define INTERNET_IP             "http://162.219.126.98:8001"
+#define PAKLOADER_DIRECTORY     "/home/wall/data/"
+#define PAK_EXTENSION           ".pak"
+
 typedef unsigned char  uint8;
 typedef unsigned short uint16;
 typedef unsigned int   uint32;
@@ -18,5 +23,4 @@ enum{
 enum{
     ZipMethod = 0x0001,
 }CompressMethod;
-
 #endif

@@ -1,5 +1,5 @@
 CC := g++
-CCFLAG := -std=c++14 -lz
+CCFLAG := -std=c++14 -lz -lm -lcurl
 DBGFLAG := -g
 CCOBJFLAG := $(CCFLAG) -c
 
@@ -29,10 +29,10 @@ default: all
 $(TARGET): $(OBJ)
 	$(CC) $(CCFLAG)  -o $@ $?
 
-$(OBJ_PATH)/%.o: $(SRC_PATH)/%.cpp
+$(OBJ_PATH)/%.o: $(SRC_PATH)/%.c*
 	$(CC) $(CCOBJFLAG) -o $@ $<
 
-$(DBG_PATH)/%.o: $(SRC_PATH)/%.cpp
+$(DBG_PATH)/%.o: $(SRC_PATH)/%.c*
 	$(CC) $(CCOBJFLAG) $(DBGFLAG) -o $@ $<
 
 $(TARGET_DEBUG): $(OBJ_DEBUG)

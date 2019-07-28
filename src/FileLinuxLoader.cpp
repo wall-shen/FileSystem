@@ -52,7 +52,7 @@ FLinuxHandle::~FLinuxHandle(){
 
 FLinuxLoader* FLinuxLoader::singleFLinuxLoader = nullptr;
 
-FLinuxLoader* FLinuxLoader::GetFWindowsLoader(){
+FLinuxLoader* FLinuxLoader::GetFLinuxLoader(){
     if(singleFLinuxLoader == nullptr){
         static FLinuxLoader staticLinuxLoader;
         singleFLinuxLoader = &staticLinuxLoader;
@@ -187,6 +187,20 @@ bool FLinuxLoader::DirectoryDelete(const char* directoryName){
 }
 
 void FLinuxLoader::FindFiles(FArray<FString>& foundFiles, const char* directory, const char* extension){
+    DIR* pDir = opendir(directory);
+    dirent* pEnt;
+
+    if(!pDir){
+        DEBUG("open dir " << directory << " failed !");
+        return;
+    }
+
+    while((pEnt = readdir(pDir)) != NULL){
+        FString file = pEnt -> d_name;
+        if(file.EndWith(extension)){
+            foundFiles.PushBack(file);
+        }
+    }
 }
 
 void FLinuxLoader::FindFilesRecursively(FArray<FString>& foundFiles, const char* directory, const char* extension){

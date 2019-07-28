@@ -359,6 +359,7 @@ FPakHandle::FPakHandle(FHandle* Inhandle, int64 InPos, PakFile& InPakFile, PakEn
     , pakEntry(InPakEntry)
     , FHandle(InPos, InPakEntry.GetUnCompressSize())
 {}
+
 int64 FPakHandle::Read(uint8* inBuffer, int64 bytesToRead){ return -1;}
 int64 FPakHandle::Write(const uint8* outBrffer, int64 bytesToWrite){ return -1;}
 
@@ -396,7 +397,26 @@ FPakHandle::~FPakHandle(){
         Close();
 }
 
-   
+
+FPakLoader::FPakLoader(const char* loaderDir){
+#ifdef LINUX
+    physicalLoader = FLinuxLoader::GetFLinuxLoader();
+#endif
+
+#ifdef WINDOWS
+    physicalLoader = FWindowsLoader::GetFWindowsLoader();
+#endif
+    FArray<FString> files;
+    physicalLoader -> FindFiles(files, loaderDir, PAK_EXTENSION);
+    for(int i = 0; i < files.Size(); i++){
+        pakFiles.PushBack(PakFile());
+        DEBUG((FString(loaderDir) + files[i]).GetStr().c_str());
+        FReadArchive* rArchive = new FReadArchive((FString(loaderDir) + files[i]).GetStr().c_str());
+        pakFiles[i].initialize(*rArchive);
+        delete rArchive;
+    }
+}
+
 int64 FPakLoader::FileSize(const char* fileName){
     for(int i = 0; i < pakFiles.Size(); i++){
         PakEntry pakEntry;
@@ -465,15 +485,15 @@ FHandle* FPakLoader::OpenWrite(const char* fileName, bool append){
 
 // Directory operation
 bool FPakLoader::DirectoryExist(const char* directoryName){
-    return  false;
+    return lowerFloader -> DirectoryExist(directoryName);
 }
 
 bool FPakLoader::DirectoryCreate(const char* directoryName){
-    return false;
+    return lowerFloader -> DirectoryCreate(directoryName);
 }
 
 bool FPakLoader::DirectoryDelete(const char* directoryName){
-    return false;
+    return lowerFloader -> DirectoryDelete(directoryName);
 }
 
 /*
@@ -497,5 +517,13 @@ void FPakLoader::FindFiles(FArray<FString>& foundFiles, const char* directory, c
 void FPakLoader::FindFilesRecursively(FArray<FString>& foundFiles, const char* directory, const char* extension){
    for(int i = 0; i < pakFiles.Size(); i++){
         pakFiles[i].FindFilesRecursively(foundFiles, directory, extension);
+    }
+}
+
+FPakLoader::~FPakLoader(){
+    for(int i = 0; i < pakFiles.Size(); i++){
+        FWriteArchive* wArchive = new FWriteArchive(pakFiles[i].pakFileName.GetStr().c_str(), 0);
+        pakFiles[i].Serialize(*wArchive);
+        delete wArchive;
     }
 }

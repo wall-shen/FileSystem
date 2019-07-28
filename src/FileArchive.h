@@ -115,8 +115,9 @@ private:
     bool isWrite;
 
 public:
-    FWriteArchive(FHandle* inHandle, const char* InFileName, int64 inPos, int64 InBufferSize = DefaultBufferSize);
+    FWriteArchive(const char* InFileName, int64 inPos, int64 InBufferSize = DefaultBufferSize);
 
+    FWriteArchive(FHandle* inHandle, const char* InFileName, int64 inPos, int64 InBufferSize = DefaultBufferSize);
 
     virtual bool IsRead(){ return isRead; }
     
@@ -171,6 +172,8 @@ private:
     bool isWrite;
     
 public:
+    FReadArchive(const char* inFileName, int64 inBufferSize = DefaultBufferSize);
+    
     FReadArchive(FHandle* inHandle, const char* inFileName, int64 inSize, int64 inBufferSize = DefaultBufferSize);
 
     virtual bool IsRead(){ return isRead; }

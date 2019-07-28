@@ -12,73 +12,96 @@
 #include <io.h>
 #include <string.h>
 #include <zlib.h>
+#include <curl/curl.h>
+#include "FileInternetLoader.h"
 using namespace std;
 
 
 int main(){
-   char q[500] = {'v', 'g', 'r', 'e', 'w'};
-   for(int j =0 ; j < 5; j++){
-      for(int i = 0; i < 100; i ++){
-         q[i+ 100*j] = 20+i;
-      }
-   }
 
-   FPhysicalLoader* loader = FLinuxLoader::GetFWindowsLoader();
-   FHandle* handle = loader -> OpenWrite("/home/wall/data/test.pak", false);
-   FWriteArchive* wArchive = new FWriteArchive(handle, "/home/wall/data/test.pak", 0);
+
+    FPhysicalLoader* loader = FLinuxLoader::GetFLinuxLoader();
+    FHandle* handle = loader -> OpenWrite("/home/wall/data/test.pak", false);
+    FWriteArchive* wArchive = new FWriteArchive(handle, "/home/wall/data/test.pak", 0);
+
+    FPakLoader pakLoader;
+    for(int i = 0; i < pakLoader.pakFiles.Size(); i++){
+        pakLoader.pakFiles[i].Print();
+    }
    
-   Resume resume(loader, "wall", 500, 1);
-   uint64 pos = resume.GetPos();
-   DEBUG("write start with pos : " << pos);
-   if(pos < resume.GetSize()){
-      pos += resume.Write((uint8*)q + pos, 100);
-   }
+/**
+ * internet Test
+ */
+
+    // FInternetLoader intLoader;
+    // FHandle* interHandle = intLoader.OpenRead("demo");
+    // uint8 q[4];
+    
+ 
+//    char q[500] = {'v', 'g', 'r', 'e', 'w'};
+//    for(int j =0 ; j < 5; j++){
+//       for(int i = 0; i < 100; i ++){
+//          q[i+ 100*j] = 20+i;
+//       }
+//    }
+
+ 
+
+//    Resume resume(loader, "wall", 12, 1);
+//    uint64 pos = resume.GetPos();
+//    DEBUG("write start with pos : " << pos);
+//    if(pos < resume.GetSize()){
+//        interHandle -> Seek(pos);
+//        interHandle -> Read(q, 4);
+//       pos += resume.Write((uint8*)q, 4);
+//    }
    /**
     * Resume test
     */
 
 
-   /**
-    * PakFile Write test
-    */
-   // PakFile pakFile;
+//    /**
+//     * PakFile Write test
+//     */
+//    PakFile pakFile;
 
-   // char a[4] = {'q', 'b', 'c', 'd'};
-   // char c[3] = {'1', '2', '3'};
-   // pakFile.SetVersion(1);
-   // pakFile.Write(handle, "123", (uint8*)a, 4);
-   // pakFile.Write(handle, "456", (uint8*)c, 3);
+//    char a[4] = {'q', 'b', 'c', 'd'};
+//    char c[3] = {'1', '2', '3'};
+//    pakFile.SetVersion(1);
+//    pakFile.Write(handle, "123", (uint8*)a, 4);
+//    pakFile.Write(handle, "456", (uint8*)c, 3);
 
-   // pakFile.Serialize(*wArchive);
+//    pakFile.Serialize(*wArchive);
+//    pakFile.Print();
 
-   // wArchive -> Flush();
+//    wArchive -> Flush();
 
-   // FHandle* readHandle = loader -> OpenRead("/home/wall/data/test.pak");
-   // FReadArchive* rArchive = new FReadArchive(readHandle, "/home/wall/data/test.pak", readHandle -> Size());
+//    FHandle* readHandle = loader -> OpenRead("/home/wall/data/test.pak");
+//    FReadArchive* rArchive = new FReadArchive(readHandle, "/home/wall/data/test.pak", readHandle -> Size());
 
-   // /** 
-   //  * pakFile Read test
-   //  */
-   // PakFile pakFile1;
-   // pakFile1.initialize(*rArchive);
-   // PakEntry pakEntry;
-   // pakFile1.Remove("123");
-   // char q[10000] = {'v', 'g', 'r', 'e', 'w'};
-   // for(int j =0 ; j < 100; j++){
-   // for(int i = 0; i < 100; i ++){
-   //    q[i+ 100*j] = 20+i;
-   // }
-   // }
-   // pakFile1.Write(handle, "098", (uint8*)q, 10000);
-   // handle -> Flush();
-   // pakFile1.FindFile("098", pakEntry);
-   // uint8 p[10000];
-   // int readSize = pakFile1.Read(readHandle, pakEntry, p);
-   // DEBUG("read size : " << readSize);
-   // pakFile1.Print();
-   // for(int i = 0; i < 10000; i++){
-   //    cout << *(p+i);
-   // }
+//    /** 
+//     * pakFile Read test
+//     */
+//    PakFile pakFile1;
+//    pakFile1.initialize(*rArchive);
+//    PakEntry pakEntry;
+//    pakFile1.Remove("123");
+//    char q[10000] = {'v', 'g', 'r', 'e', 'w'};
+//    for(int j =0 ; j < 100; j++){
+//    for(int i = 0; i < 100; i ++){
+//       q[i+ 100*j] = 20+i;
+//    }
+//    }
+//    pakFile1.Write(handle, "098", (uint8*)q, 10000);
+//    handle -> Flush();
+//    pakFile1.FindFile("098", pakEntry);
+//    uint8 p[10000];
+//    int readSize = pakFile1.Read(readHandle, pakEntry, p);
+//    DEBUG("read size : " << readSize);
+//    pakFile1.Print();
+//    for(int i = 0; i < 10000; i++){
+//       cout << *(p+i);
+//    }
 
 
 
@@ -193,9 +216,6 @@ int main(){
     // } else {
     //     cout << "uncompress() succeed: \n" << (char *)uncompr;
     // }
-
-
-
 }
 
 

@@ -1,5 +1,25 @@
 #include "FileArchive.h"
+#include "FileLoader.h"
 #include <string.h>
+
+FWriteArchive::FWriteArchive(const char* InFileName, int64 inPos, int64 InBufferSize)
+    : fileName(InFileName)
+    , pos(inPos)
+    , bufferSize(InBufferSize)
+    , bufferCount(0)
+{  
+#ifdef WINDOWS
+    handle = FWindowsLoader::GetFWindwsLoader() -> OpenWrite(InFileName, false);
+#endif
+
+#ifdef LINUX
+    handle = FLinuxLoader::GetFLinuxLoader() -> OpenWrite(InFileName, false);
+#endif
+    isWrite = true;
+    isRead = false;
+    buffer = new uint8[InBufferSize];
+}
+
 
 FWriteArchive::FWriteArchive(FHandle* inHandle, const char* InFileName, int64 inPos, int64 InBufferSize)
     : handle(inHandle)
@@ -114,6 +134,30 @@ FWriteArchive::~FWriteArchive(){
         DEBUG("FWriteArchive close the handle failed");
     if(buffer)
         delete[] buffer;
+    if(handle)
+        delete handle;
+}
+
+
+
+FReadArchive::FReadArchive(const char* inFileName, int64 inBufferSize)
+    : fileName(inFileName)
+    , bufferSize(inBufferSize)
+    , bufferPos(0)
+    , pos(0)
+    , bufferCount(0)
+{
+#ifdef WINDOWS
+    handle = FWindowsLoader::GetFWindwsLoader() -> OpenRead(inFileName, false);
+#endif
+
+#ifdef LINUX
+    handle = FLinuxLoader::GetFLinuxLoader() -> OpenRead(inFileName);
+#endif
+    size = handle -> Size();
+    isRead = true;
+    isWrite = false;
+    buffer = new uint8[bufferSize];   
 }
 
 FReadArchive::FReadArchive(FHandle* inHandle, const char* inFileName, int64 inSize, int64 inBufferSize)
@@ -244,4 +288,6 @@ FReadArchive::~FReadArchive(){
         DEBUG("FReadArchive close the handle failed! ");
     if(buffer)
         delete[] buffer;
+    if(handle)
+        delete handle;
 }

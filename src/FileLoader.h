@@ -107,6 +107,7 @@ protected:
     FLoader* lowerFloader;
 public:
     FLoader(){}
+
     // Get fileLoad lower than this file
     virtual FLoader* GetLowerLoader(){ return lowerFloader; }
 
@@ -224,7 +225,7 @@ private:
     FLinuxLoader(){}
     static FLinuxLoader* singleFLinuxLoader;
 public:
-    static FLinuxLoader* GetFWindowsLoader();
+    static FLinuxLoader* GetFLinuxLoader();
 
     virtual int64 FileSize(const char* fileName);
 

@@ -6,55 +6,215 @@
 #include <string>
 #include <iomanip>
 
+FInternetHandle::FInternetHandle(const char* InIp, const char* InfileName, int64 InPos, int64 InSize)
+    : ip(InIp)
+    , fileName(InfileName)
+    , FHandle(InPos, InSize)
+{
+    curl = curl_easy_init();
+}
 
-// int64 FInternetLoader::FileSize(const char* fileName){}
+class ReadInfo{
+public:
+    uint8* data;
+    uint64 size;
+    uint64 length;
+public:
+    ReadInfo(uint8* Indata = 0, uint64 InSize = 0, uint64 Inlength = 0)
+        : data(Indata)
+        , size(InSize)
+        , length(Inlength)
+    {}
+};
 
-// // If the file is Existing
-// bool FInternetLoader::FileExists(const char* fileName){}
+cJSON *json, *jsonLength, *jsonSize, *jsonData;
+size_t readFromData(void* buffer, size_t size, size_t nmemb, void* userPtr){
+    json = cJSON_Parse((char*)buffer);
+    if(!json){
+        return size * nmemb;
+    }
+    char * src = cJSON_Print(json);
+    jsonLength = cJSON_GetObjectItem(json, "length");
+    jsonSize = cJSON_GetObjectItem(json, "size");
+    jsonData = cJSON_GetObjectItem(json, "data");
+    ReadInfo* data = (ReadInfo*)userPtr;
+    data -> size = jsonSize -> valueint;
+    data -> length = jsonLength -> valueint;
+    memcpy(data -> data, jsonData -> valuestring, data -> length);
 
-// bool FInternetLoader::FileDelete(const char* fileName){}
+    cJSON_Delete(json);
+    return size * nmemb; 
+}
 
-// bool FInternetLoader::FileMove(const char* fileFrom, const char* fileTo){}
+int64 FInternetHandle::Read(uint8* inBuffer, int64 bytesToRead){
+    if(!curl)
+    return -1;
+    ReadInfo data(inBuffer);
+    FString url = FString(ip) + "/download?fileName=" + FString(fileName) + "&pos=" + FString(std::to_string(pos)) + "&length=" + FString(std::to_string(bytesToRead));
+    DEBUG(url.GetStr());
+    curl_easy_setopt(curl, CURLOPT_URL, url.GetStr().c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, readFromData);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
 
-// bool FInternetLoader::FileCopy(const char* fileFrom, const char* fileTo){}
+    curl_easy_perform(curl);
+    long retCode = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &retCode);
+    if(retCode == 200){
+        pos += data.length;
+        return data.length;      
+    }
+    else{
+        return -1;
+    }
+}
+int64 FInternetHandle::Write(const uint8* outBuffer, int64 bytesToWrite){
 
-// /*
-//     * Return read handle of file
-//     * @param fileName  the name of file to read
-//     * @return          the read handle of file
-//     */
-// FHandle* FInternetLoader::OpenRead(const char* fileName){}
+    return 0;
+}
+bool FInternetHandle::Seek(int64 newPosition){
+    if(newPosition < 0)
+        return false;
+    pos = newPosition;
+    return true;
+}
+bool FInternetHandle::SeekFromEnd(int64 newPosition){
+    if(newPosition < -size)
+        return false;
+    pos = size + newPosition;
+    return true;
+}
+bool FInternetHandle::Flush(){
+    return true;
+}
+bool FInternetHandle::Close(){
+    return true;
+}
+FInternetHandle::~FInternetHandle(){
+    curl_easy_cleanup(curl);    
+    curl = NULL;
+}
 
-// /*
-//     * Return write handle of file
-//     * @param fileName  the name of file to write
-//     * @param append    if append to the end of file
-//     * @return          the write handle of file
-//     */
-// FHandle* FInternetLoader::OpenWrite(const char* fileName, bool append){}
+int64 FInternetLoader::FileSize(const char* fileName){
+    CURL* curl;
+    CURLcode res;
+    curl = curl_easy_init();
+    if(curl){
+        ReadInfo data;
+        FString url = FString(ip) + "/download?fileName=" + FString(fileName) + "&pos=0&length=0";
+        DEBUG(url.GetStr());
+        curl_easy_setopt(curl, CURLOPT_URL, url.GetStr().c_str());
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, readFromData);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
 
-// // Directory operation
-// bool FInternetLoader::DirectoryExist(const char* directoryName){}
+        res = curl_easy_perform(curl);
+        long retCode = 0;
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &retCode);
 
-// bool FInternetLoader::DirectoryCreate(const char* directoryName){}
+        if(res != 0)
+            curl_easy_cleanup(curl);
+        
+        if(retCode == 200){
+            return data.size;
+        }
+        
+    }
+    return -1;
+}
 
-// bool FInternetLoader::DirectoryDelete(const char* directoryName){}
+// If the file is Existing
+bool FInternetLoader::FileExists(const char* fileName){
+    CURL* curl;
+    CURLcode res;
+    curl = curl_easy_init();
+    if(curl){
+        ReadInfo data;
+        FString url = FString(ip) + "/download?fileName=" + FString(fileName) + "&pos=0&length=0";
+        DEBUG(url.GetStr());
+        curl_easy_setopt(curl, CURLOPT_URL, url.GetStr().c_str());
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, readFromData);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
 
-// /*
-//     * Find files with extension in the given directory
-//     * @param foundFiles    array to save the files found
-//     * @param directory     path to find files
-//     * @param extension     file filter
-//     */
-// void FInternetLoader::FindFiles(FArray<FString>& foundFiles, const char* directory, const char* extension){}
+        res = curl_easy_perform(curl);
+        long retCode = 0;
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &retCode);
 
-//     /*
-//     * Find files with extension in the given directory recursively
-//     * @param foundFiles    array to save the files found
-//     * @param directory     path to find files
-//     * @param extension     file filter
-//     */
-// void FInternetLoader::FindFilesRecursively(FArray<FString>& foundFiles, const char* directory, const char* extension){}
+        if(res != 0)
+            curl_easy_cleanup(curl);
+        
+        if(retCode == 200){
+            if(data.size == 0)
+                return false;
+            else
+                return true;
+        }
+        
+    }
+    return false;
+}
+
+bool FInternetLoader::FileDelete(const char* fileName){
+    return false;
+}
+
+bool FInternetLoader::FileMove(const char* fileFrom, const char* fileTo){
+    return false;
+}
+
+bool FInternetLoader::FileCopy(const char* fileFrom, const char* fileTo){
+    return false;
+}
+
+/*
+    * Return read handle of file
+    * @param fileName  the name of file to read
+    * @return          the read handle of file
+    */
+FHandle* FInternetLoader::OpenRead(const char* fileName){
+    int64 fSize = FileSize(fileName);
+    if(fSize == 0)
+        return nullptr;
+    FHandle* retHandle = new FInternetHandle(ip, fileName, 0, fSize);
+    return retHandle;
+}
+
+/*
+    * Return write handle of file
+    * @param fileName  the name of file to write
+    * @param append    if append to the end of file
+    * @return          the write handle of file
+    */
+FHandle* FInternetLoader::OpenWrite(const char* fileName, bool append){
+    return nullptr;
+}
+
+// Directory operation
+bool FInternetLoader::DirectoryExist(const char* directoryName){
+    return false;
+}
+
+bool FInternetLoader::DirectoryCreate(const char* directoryName){
+    return false;
+}
+
+bool FInternetLoader::DirectoryDelete(const char* directoryName){
+    return false;
+}
+
+/*
+    * Find files with extension in the given directory
+    * @param foundFiles    array to save the files found
+    * @param directory     path to find files
+    * @param extension     file filter
+    */
+void FInternetLoader::FindFiles(FArray<FString>& foundFiles, const char* directory, const char* extension){}
+
+    /*
+    * Find files with extension in the given directory recursively
+    * @param foundFiles    array to save the files found
+    * @param directory     path to find files
+    * @param extension     file filter
+    */
+void FInternetLoader::FindFilesRecursively(FArray<FString>& foundFiles, const char* directory, const char* extension){}
 
 FString defaultDir = "/home/wall/data/";
 FString defaultDownloadExtension = ".downloading";
@@ -125,7 +285,7 @@ void Resume::WriteToDisk(){
 }
 
 void WriteToPak(const uint8* data, uint64 byteToWrite, const char* fileName){
-    FLinuxLoader* loader = FLinuxLoader::GetFWindowsLoader();
+    FLinuxLoader* loader = FLinuxLoader::GetFLinuxLoader();
     FHandle* handle = loader -> OpenWrite("/home/wall/data/test.pak", false);
     FWriteArchive* wArchive = new FWriteArchive(handle, "/home/wall/data/test.pak", 0);
 
