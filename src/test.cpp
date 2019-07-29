@@ -14,21 +14,30 @@
 #include <zlib.h>
 #include <curl/curl.h>
 #include "FileInternetLoader.h"
+#include "FileManager.h"
 using namespace std;
 
 
 int main(){
 
+    FInternetLoader intLoader;
+    FHandle* interHandle = intLoader.OpenRead("500demo");
 
-    FPhysicalLoader* loader = FLinuxLoader::GetFLinuxLoader();
-    FHandle* handle = loader -> OpenWrite("/home/wall/data/test.pak", false);
-    FWriteArchive* wArchive = new FWriteArchive(handle, "/home/wall/data/test.pak", 0);
+    FManager manager;
+    manager.WriteToPak(interHandle, "/home/wall/data/test.pak", "500demo", 500, 1);
 
-    FPakLoader pakLoader;
-    for(int i = 0; i < pakLoader.pakFiles.Size(); i++){
-        pakLoader.pakFiles[i].Print();
-    }
-   
+    // FPhysicalLoader* loader = FLinuxLoader::GetFLinuxLoader();
+    // FHandle* handle = loader -> OpenWrite("/home/wall/data/test.pak", false);
+    // FWriteArchive* wArchive = new FWriteArchive(handle, "/home/wall/data/test.pak", 0);
+
+    // FPakLoader* pakLoader = FPakLoader::GetFPakLoader();
+    // for(int i = 0; i < pakLoader -> pakFiles.Size(); i++){
+    //     pakLoader -> pakFiles[i].Print();
+    // }
+
+
+
+
 /**
  * internet Test
  */
@@ -44,8 +53,12 @@ int main(){
 //          q[i+ 100*j] = 20+i;
 //       }
 //    }
-
+//    FHandle* handle = loader -> OpenWrite("/home/wall/data/500demo", false);
+//     handle -> Write((uint8*)q, 500);
  
+/**
+* Resume test
+*/
 
 //    Resume resume(loader, "wall", 12, 1);
 //    uint64 pos = resume.GetPos();
@@ -55,9 +68,6 @@ int main(){
 //        interHandle -> Read(q, 4);
 //       pos += resume.Write((uint8*)q, 4);
 //    }
-   /**
-    * Resume test
-    */
 
 
 //    /**
@@ -68,6 +78,7 @@ int main(){
 //    char a[4] = {'q', 'b', 'c', 'd'};
 //    char c[3] = {'1', '2', '3'};
 //    pakFile.SetVersion(1);
+//    pakFile.SetMountPoint("/test");
 //    pakFile.Write(handle, "123", (uint8*)a, 4);
 //    pakFile.Write(handle, "456", (uint8*)c, 3);
 
@@ -94,9 +105,10 @@ int main(){
 //    }
 //    pakFile1.Write(handle, "098", (uint8*)q, 10000);
 //    handle -> Flush();
-//    pakFile1.FindFile("098", pakEntry);
-//    uint8 p[10000];
+//    pakFile1.FindFile("500demo", pakEntry);
+//    uint8 p[500];
 //    int readSize = pakFile1.Read(readHandle, pakEntry, p);
+//    cout << p;
 //    DEBUG("read size : " << readSize);
 //    pakFile1.Print();
 //    for(int i = 0; i < 10000; i++){

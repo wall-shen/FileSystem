@@ -26,6 +26,23 @@ public:
         PreLoad();
     }
 
+    Resume(const char* InFileName, uint64 InSize, uint32 InVersion)
+        : fileName(InFileName)
+        , size(InSize)
+        , version(InVersion)
+        , pos(0)
+    {
+#ifdef LINUX
+        physicalLoader = FLinuxLoader::GetFLinuxLoader();
+#endif
+
+#ifdef WINDOWS
+        physicalLoader = FWindowsLoader::GetFWindowsLoader();
+#endif
+        data = new uint8[InSize];
+        PreLoad();
+    }
+
     void PreLoad();
 
     void WriteToDisk();
@@ -38,6 +55,7 @@ public:
     uint64 GetSize(){ return size; }
     uint32 GetVsersion(){ return version; }
     uint64 GetPos(){ return pos; }
+    uint8* GetData(){ return data;}
 
     ~Resume();
 };

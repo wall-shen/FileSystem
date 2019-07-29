@@ -272,7 +272,7 @@ void Resume::WriteToDisk(){
     FString targetPath = defaultDir + downloadingName;
     DEBUG("WriteToDisk targetName : " << targetPath.GetStr())   ;
     Print();
-    FHandle* handle = physicalLoader -> OpenWrite("/home/wall/data/334884854.downloading" , false);
+    FHandle* handle = physicalLoader -> OpenWrite(targetPath.GetStr().c_str() , false);
     int writeSize = handle -> Write((uint8*)&version, sizeof(version));
     CMP_CHECK(writeSize, sizeof(version), "write downloading version failed !" << targetPath.GetStr());
     writeSize = handle -> Write((uint8*)&size, sizeof(size));
@@ -288,7 +288,6 @@ void WriteToPak(const uint8* data, uint64 byteToWrite, const char* fileName){
     FLinuxLoader* loader = FLinuxLoader::GetFLinuxLoader();
     FHandle* handle = loader -> OpenWrite("/home/wall/data/test.pak", false);
     FWriteArchive* wArchive = new FWriteArchive(handle, "/home/wall/data/test.pak", 0);
-
     PakFile pakFile;
 
    char a[4] = {'q', 'b', 'c', 'd'};
@@ -315,6 +314,7 @@ void WriteToPak(const uint8* data, uint64 byteToWrite, const char* fileName){
     int readSize = pakFile1.Read(readHandle, pakEntry, p);
     DEBUG("read size : " << readSize);
     pakFile1.Print();
+    pakFile1.Serialize(*wArchive);
     for(int i = 0; i < byteToWrite; i++){
         std::cout << *(p+i);
     }
@@ -337,9 +337,12 @@ int64 Resume::Write(uint8* inBuffer, uint64 btyeToWrite){
 }
 
 Resume::~Resume(){
-    if(data != NULL){
+    if(pos != size){
         WriteToDisk();
+    }
+    if(data != NULL){
         delete[] data;
         data = NULL;
     }
+
 }

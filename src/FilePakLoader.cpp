@@ -12,6 +12,7 @@ void PakInfo::Serialize(FArchive& ar){
     ar << indexOffset;  
     ar << indexSize;
     ar << version;
+    ar << mountPoint;
 }
 
 void PakInfo::Print(){
@@ -19,6 +20,7 @@ void PakInfo::Print(){
     std::cout << std::left << std::setw(15) << "indexOffset" << indexOffset << std::endl;
     std::cout << std::left << std::setw(15) << "indexSize" << indexSize << std::endl;
     std::cout << std::left << std::setw(15) << "version" << version << std::endl;
+    std::cout << std::left << std::setw(15) << "mountPoint" << mountPoint.GetStr() << std::endl;
 }
 
 void FileBlock::Print(){
@@ -66,7 +68,10 @@ void PakEntry::Print(){
     std::cout << std::left << std::setw(15) << "uncompressSize" << uncompressSize << std::endl;
     std::cout << std::left << std::setw(15) << "compressMethod" << compressMethod << std::endl;
     std::cout << std::left << std::setw(15) << "fbSize" << fBSize << std::endl;
-    std::cout << std::left << std::setw(15) << "flag" << flag << std::endl;
+    if(flag == NormalFlag)
+        std::cout << std::left << std::setw(15) << "flag" << "normal" << std::endl;
+    else
+        std::cout << std::left << std::setw(15) << "flag" << "delete" << std::endl;
     std::cout << std::left << std::setw(15) << "maxBlockSize" << maxBlockSize << std::endl;
     std::cout << std::left << std::setw(15) << "blockList info:" << std::endl;
     for(int i = 0; i < blockList.Size(); i++){
@@ -315,9 +320,8 @@ void PakFile::Serialize(FArchive& archive){
 void PakFile::initialize(FArchive& archive){
     Serialize(archive);
     pakFileName = archive.GetFileName();
-    mountPoint = "/" + pakFileName.GetFileName();
     size = archive.Size();
-    LoadIndex(archive);   
+    LoadIndex(archive);
 }
 
 void PakFile::LoadIndex(FArchive& archive){
@@ -416,6 +420,14 @@ FPakLoader::FPakLoader(const char* loaderDir){
         delete rArchive;
     }
 }
+FPakLoader* FPakLoader::singleFPakLoader = nullptr;
+FPakLoader* FPakLoader::GetFPakLoader(){
+    if(singleFPakLoader == nullptr){
+        static FPakLoader staticFakLoader;
+        singleFPakLoader = &staticFakLoader;
+    }
+    return singleFPakLoader;
+}
 
 int64 FPakLoader::FileSize(const char* fileName){
     for(int i = 0; i < pakFiles.Size(); i++){
@@ -481,6 +493,22 @@ FHandle* FPakLoader::OpenWrite(const char* fileName, bool append){
         }
     }
     return nullptr;
+}
+
+int64 FPakLoader::Write(const char * InpakName, const char* fileName, const uint8* outBuffer, int64 bytesToWrite){
+    if(!InpakName || !fileName || !outBuffer || bytesToWrite < 0)
+        return -1;
+
+    FString pakName = InpakName;
+    for(int i = 0; i < pakFiles.Size(); i++){
+        if(pakName == pakFiles[i].GetFileName()){
+            FHandle* handle = GetPhysicalWriteHandle(pakFiles[i].GetFileName().GetStr().c_str());
+            int64 copySize = pakFiles[i].Write(handle, fileName, outBuffer, bytesToWrite);
+            delete handle;
+            return copySize;
+        }
+    }
+    return 0;
 }
 
 // Directory operation

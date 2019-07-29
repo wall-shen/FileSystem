@@ -23,13 +23,16 @@ public:
     int64 indexSize;
     uint32 magic;
     uint32 version;
+    FString mountPoint;
 
 public:
-    PakInfo(int64 InIndexOffset = 0, int64 InIndexSize = 0)
+    PakInfo(int64 InIndexOffset = 0, int64 InIndexSize = 0, const char* InMountPoint = "/")
         : indexOffset(InIndexOffset)
         , indexSize(InIndexSize)
-        , magic(PkgMigic){
-        indexOffset = sizeof(indexOffset) + sizeof(indexSize) + sizeof(magic) + sizeof(version);
+        , magic(PkgMigic)
+        , mountPoint(InMountPoint)
+    {
+        indexOffset = sizeof(indexOffset) + sizeof(indexSize) + sizeof(magic) + sizeof(version) + mountPoint.GetSerializedSize();
     }
 
     int64 GetIndexOffset() { return indexOffset; }
@@ -37,7 +40,7 @@ public:
     int64 GetIndexSize() { return indexSize; }
 
     uint64 GetSerializedSize(){
-        uint64 size = sizeof(indexOffset) + sizeof(indexSize) + sizeof(magic) + sizeof(version);
+        uint64 size = sizeof(indexOffset) + sizeof(indexSize) + sizeof(magic) + sizeof(version) + mountPoint.GetSerializedSize();
         return size;
     }
 
@@ -133,14 +136,12 @@ public:
     PakIndex index;
     FArray<PakEntry> files;
     int32 entryNum;
-    FString mountPoint;
     int64 size;
     bool isValid;
 
 public:
     PakFile()
-        : mountPoint("/")
-        , size(0)
+        : size(0)
         , entryNum(0)
         , isValid(false)
     {}
@@ -149,10 +150,10 @@ public:
     GetFileName() { return pakFileName; }
     int64 GetSize() { return size; }
     PakIndex& GetIndex() { return index; }
-    void SetMountPoint(const char* path){ mountPoint = path; }
+    void SetMountPoint(const char* path){ info.mountPoint = path; }
     uint32 GetVersion() { return info.version; }
     void SetVersion(uint32 InVersion) { info.version = InVersion; }
-    FString& GetMountPoint() { return mountPoint; }
+    FString& GetMountPoint() { return info.mountPoint; }
     bool Remove(const char* fileName);
     int64 Read(FHandle* handle, PakEntry&, uint8* inBuffer);
     int64 Write(FHandle* handle, const char* fileName, const uint8* outBrffer, int64 bytesToWrite);
@@ -195,8 +196,13 @@ class FPakLoader : public FLoader{
 // private:
 public:
     FArray<PakFile> pakFiles;
-public:
+    static FPakLoader* singleFPakLoader;
+
     FPakLoader(const char* defaultDir = PAKLOADER_DIRECTORY);
+public:
+
+
+    static FPakLoader* GetFPakLoader();
 
     // Get fileLoad lower than this file
     virtual FLoader* GetLowerLoader() { return lowerFloader;}
@@ -237,6 +243,8 @@ public:
      * @return          the write handle of file
      */
     virtual FHandle* OpenWrite(const char* fileName, bool append);
+
+    int64 Write(const char * pakName, const char* fileName, const uint8* outBrffer, int64 bytesToWrite);
 
     // Directory operation
     virtual bool DirectoryExist(const char* directoryName);

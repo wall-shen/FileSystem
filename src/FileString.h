@@ -124,6 +124,10 @@ public:
         return s;
     }
 
+    int32 GetSerializedSize(){
+        return sizeof(int32) + str.size() + 1;
+    }
+
 };
 
 #endif
