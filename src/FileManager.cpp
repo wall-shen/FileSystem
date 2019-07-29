@@ -90,12 +90,12 @@ int64 FManager::WriteToPak(FHandle* handle, const char* InpakName, const char* f
         if(pakLoader -> pakFiles[i].GetFileName() == pakName){
             Resume resume(fileName, size, version);
             DEBUG("write start with pos : " << resume.GetPos());
-            uint8 q[150];
+            uint8 q[100];
             while(resume.GetPos() < resume.GetSize()){
                 handle -> Seek(resume.GetPos());
-                int64 readSize = handle -> Read(q, 150);
+                int64 readSize = handle -> Read(q, 100);
                 resume.Write(q, readSize);
-                if(resume.GetPos() % 300 == 0){
+                if(resume.GetPos() % 200 == 0){
                     DEBUG("continue?");
                     int flag;
                     std::cin >> flag;
