@@ -68,6 +68,10 @@ public:
         return str == InStr.str;
     }
 
+    int32 operator== (const char* InStr){
+        return str == InStr;
+    }
+
     friend bool operator< (const FString& str1, const FString& str2){
         return str1.str < str2.str;
     }
@@ -114,6 +118,12 @@ public:
     FString GetFileName(){
         int pos = str.rfind('/');
         FString s = str.substr(pos + 1);
+        return s;
+    }
+
+    FString GetNextStr(FString cutStr){
+        int pos = str.find(cutStr.GetStr());
+        FString s = str.substr(pos + cutStr.GetSize());
         return s;
     }
 

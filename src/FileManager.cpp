@@ -95,15 +95,15 @@ int64 FManager::WriteToPak(FHandle* handle, const char* InpakName, const char* f
                 handle -> Seek(resume.GetPos());
                 int64 readSize = handle -> Read(q, 100);
                 resume.Write(q, readSize);
-                if(resume.GetPos() % 200 == 0){
-                    DEBUG("continue?");
-                    int flag;
-                    std::cin >> flag;
-                    if(flag == 0)
-                        return resume.GetPos();
-                }
+                // if(resume.GetPos() % 200 == 0){
+                //     DEBUG("continue?");
+                //     int flag;
+                //     std::cin >> flag;
+                //     if(flag == 0)
+                //         return resume.GetPos();
+                // }
             }
-            // pakLoader -> Write(InpakName, fileName, resume.GetData(), size);
+            pakLoader -> Write(InpakName, fileName, resume.GetData(), size);
         }
     }
     return 0;

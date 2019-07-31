@@ -19,18 +19,51 @@ using namespace std;
 
 
 int main(){
-    FInternetLoader intLoader;
-    FHandle* interHandle = intLoader.OpenRead("500demo");
 
-    FManager manager;
-    manager.WriteToPak(interHandle, "/home/wall/data/test.pak", "500demo", 500, 1);
+   char q[500];
+   for(int j =0 ; j < 5; j++){
+      for(int i = 0; i < 100; i ++){
+         q[i+ 100*j] = 20+i;
+      }
+   }
+    FPakLoader* pakLoader = FPakLoader::GetFPakLoader();
+    pakLoader -> CreatePak("/home/wall/data/test.pak");
+    pakLoader -> pakFiles[0].Remove("500demo");
+    pakLoader -> pakFiles[0].CreateFile("temp", 190, 190, 0);
+    pakLoader -> pakFiles[0].Remove("temp");
+    pakLoader -> pakFiles[0].CreateFile("500demo", 500, 500, 0);
+    FHandle* whandle = pakLoader -> OpenWrite("500demo", false);
+    whandle -> Write((uint8*)q, 500);
+    for(int i = 0; i < pakLoader -> pakFiles.Size(); i++){
+        pakLoader -> pakFiles[i].Print();
+    }
+    FHandle* rHandle = pakLoader -> OpenRead("500demo");
+    char p[500];
+    rHandle -> Read((uint8*)p, 500);
+    cout << p;
+
+/**
+ * compress resume test
+ */
+    // FInternetLoader intLoader;
+    // FHandle* interHandle = intLoader.OpenRead("500demo");
+
+    // FManager manager;
+    // manager.WriteToPak(interHandle, "/home/wall/data/test.pak", "500demo", 500, 1);
 
 
+//     FLinuxLoader* loader = FLinuxLoader::GetFLinuxLoader();
+//    FHandle* readHandle = loader -> OpenRead("/home/wall/data/test.pak");
+//    FReadArchive* rArchive = new FReadArchive(readHandle, "/home/wall/data/test.pak", readHandle -> Size());
+//    PakFile pakFile1;
 
-    // FPakLoader* pakLoader = FPakLoader::GetFPakLoader();
-    // for(int i = 0; i < pakLoader -> pakFiles.Size(); i++){
-    //     pakLoader -> pakFiles[i].Print();
-    // }
+//     pakFile1.initialize(*rArchive);
+//     PakEntry pakEntry;
+//     pakFile1.FindFile("500demo", pakEntry);
+//     uint8 p[500];
+//     int readSize = pakFile1.Read(readHandle, pakEntry, p);
+//     cout << p;
+
 
 
 
@@ -44,12 +77,6 @@ int main(){
     // uint8 q[4];
     
  
-//    char q[500] = {'v', 'g', 'r', 'e', 'w'};
-//    for(int j =0 ; j < 5; j++){
-//       for(int i = 0; i < 100; i ++){
-//          q[i+ 100*j] = 20+i;
-//       }
-//    }
 //    FHandle* handle = loader -> OpenWrite("/home/wall/data/500demo", false);
 //     handle -> Write((uint8*)q, 500);
  
@@ -89,16 +116,10 @@ int main(){
 //    wArchive -> Flush();
 
 
-
-//    FHandle* readHandle = loader -> OpenRead("/home/wall/data/test.pak");
-//    FReadArchive* rArchive = new FReadArchive(readHandle, "/home/wall/data/test.pak", readHandle -> Size());
-
 //    /** 
 //     * pakFile Read test
 //     */
-//    PakFile pakFile1;
-//    pakFile1.initialize(*rArchive);
-//    PakEntry pakEntry;
+ 
 //    pakFile1.Remove("123");
 //    char q[10000] = {'v', 'g', 'r', 'e', 'w'};
 //    for(int j =0 ; j < 100; j++){
@@ -108,10 +129,7 @@ int main(){
 //    }
 //    pakFile1.Write(handle, "098", (uint8*)q, 10000);
 //    handle -> Flush();
-//    pakFile1.FindFile("500demo", pakEntry);
-//    uint8 p[500];
-//    int readSize = pakFile1.Read(readHandle, pakEntry, p);
-//    cout << p;
+
 //    pakFile1.Serialize(*wArchive);
 //    DEBUG("read size : " << readSize);
 //    pakFile1.Print();

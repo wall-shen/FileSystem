@@ -125,7 +125,7 @@ void FWriteArchive::Serialize(void* pValue, int64 length){
     // }
     if(length > 0){
         if(!WriteToHandle((uint8*)pValue, length))
-        DEBUG("Write to Handle failed");
+            DEBUG("Write to Handle failed");
     }
 }
 

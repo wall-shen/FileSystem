@@ -328,11 +328,11 @@ int64 Resume::Write(uint8* inBuffer, uint64 btyeToWrite){
     memcpy(data + pos, inBuffer, btyeToWrite);
     pos += btyeToWrite;
 
-    if(pos == size){
-        WriteToPak(data, size, fileName.GetStr().c_str());
-        delete[] data;
-        data = NULL;
-    }
+    // if(pos == size){
+    //     WriteToPak(data, size, fileName.GetStr().c_str());
+    //     delete[] data;
+    //     data = NULL;
+    // }
     return btyeToWrite;
 }
 

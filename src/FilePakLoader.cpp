@@ -12,7 +12,6 @@ void PakInfo::Serialize(FArchive& ar){
     ar << indexOffset;  
     ar << indexSize;
     ar << version;
-    ar << mountPoint;
 }
 
 void PakInfo::Print(){
@@ -20,7 +19,6 @@ void PakInfo::Print(){
     std::cout << std::left << std::setw(15) << "indexOffset" << indexOffset << std::endl;
     std::cout << std::left << std::setw(15) << "indexSize" << indexSize << std::endl;
     std::cout << std::left << std::setw(15) << "version" << version << std::endl;
-    std::cout << std::left << std::setw(15) << "mountPoint" << mountPoint.GetStr() << std::endl;
 }
 
 void FileBlock::Print(){
@@ -234,6 +232,7 @@ int64 PakFile::Write(FHandle* handle, const char* fileName, const uint8* outBuff
             }
             else{
                 files[areaPos.second].blockList.Erase(areaPos.first);
+                files[areaPos.second].fBSize--;
             }
         }
         else{
@@ -269,6 +268,7 @@ int64 PakFile::Write(FHandle* handle, const char* fileName, const uint8* outBuff
             }
             else{
                 files[areaPos.second].blockList.Erase(areaPos.first);
+                files[areaPos.second].fBSize--;
             }
         }
 
@@ -287,6 +287,98 @@ int64 PakFile::Write(FHandle* handle, const char* fileName, const uint8* outBuff
         return -1;
     entryNum += 1;
     return bytesToWrite;
+}
+
+int64 PakFile::CreateFile(const char* fileName, int64 size, int64 uncompressSize, uint32 compressMethod){
+    if(!fileName || size <= 0)
+        return -1;
+    Remove(fileName);
+
+
+    //alloc rom
+    BlockList newEntryBlockList;
+    auto deleteListIt = deleteList.lower_bound(size);
+    if(deleteListIt != deleteList.end()){
+
+        /**
+         * areaPos -> first     offset of block in blockList of entry
+         * areaPos -> second    offset of entry in files
+         */
+        auto areaPos = deleteListIt -> second;
+        FileBlock targetBlock = files[areaPos.second].blockList[areaPos.first];
+
+        if(size == targetBlock.GetSize()){
+            deleteList.erase(deleteListIt);
+            files[areaPos.second].blockList[areaPos.first].start = 0;
+            files[areaPos.second].blockList[areaPos.first].end = 0;
+            BlockList& list = files[areaPos.second].blockList;
+            for(int i = 0; i < list.Size(); i++){
+                if(list[i].GetStart() != 0 || list[i].GetEnd() != 0){
+                    break;
+                }
+                if(i == list.Size() - 1){
+                    files.Erase(areaPos.second);
+                }
+            }
+            // if(files[areaPos.second].blockList.Size() == 1){
+            //     files.Erase(areaPos.second);
+            // }
+            // else{
+            //     files[areaPos.second].blockList.Erase(areaPos.first);
+            //     files[areaPos.second].fBSize--;
+            // }
+        }
+        else{
+            deleteList.erase(deleteListIt);
+            files[areaPos.second].blockList[areaPos.first].start += size;
+            targetBlock.end = files[areaPos.second].blockList[areaPos.first].start;
+            deleteList.insert(std::make_pair(files[areaPos.second].blockList[areaPos.first].GetSize(), std::make_pair(areaPos.first, areaPos.second)));
+        }
+        newEntryBlockList.PushBack(targetBlock);
+    }
+    else{
+        uint64 leftToWrite = size;
+        if(deleteList.size() != 0){
+            /**
+             * areaPos -> first     offset of block in blockList of entry
+             * areaPos -> second    offset of entry in files
+             */
+            auto areaPos = (--deleteListIt) -> second;
+            FileBlock& targetBlock = files[areaPos.second].blockList[areaPos.first];
+            newEntryBlockList.PushBack(targetBlock);
+            leftToWrite -= targetBlock.GetSize();
+
+            deleteList.erase(deleteListIt);
+            files[areaPos.second].blockList[areaPos.first].start = 0;
+            files[areaPos.second].blockList[areaPos.first].end = 0;
+            BlockList& list = files[areaPos.second].blockList;
+            for(int i = 0; i < list.Size(); i++){
+                if(list[i].GetStart() != 0 || list[i].GetEnd() != 0){
+                    break;
+                }
+                if(i == list.Size() - 1){
+                    files.Erase(areaPos.second);
+                }
+            }
+            // if(files[areaPos.second].blockList.Size() == 1){
+            //     files.Erase(areaPos.second);
+            // }
+            // else{
+            //     files[areaPos.second].blockList.Erase(areaPos.first);
+            //     files[areaPos.second].fBSize--;
+            // }
+        }
+
+        // write to new block
+        newEntryBlockList.PushBack(FileBlock(GetInfo().GetIndexOffset(), GetInfo().GetIndexOffset() + leftToWrite));
+
+        info.indexOffset += leftToWrite;
+    }
+
+    if(!AddEntryToFiles(fileName, size, uncompressSize, compressMethod, newEntryBlockList))
+        return -1;
+    entryNum += 1;
+    return size;
 }
 
 void PakFile::Serialize(FArchive& archive){
@@ -333,7 +425,8 @@ void PakFile::LoadIndex(FArchive& archive){
         if(files[i].flag == DeletedFlag){
             for(int j = 0; j < files[i].blockList.Size(); j++){
                 FileBlock& targetBlock = files[i].blockList[j];
-                deleteList.insert(std::make_pair(targetBlock.GetSize(), std::make_pair(j, i)));
+                if(targetBlock.GetStart() != 0 || targetBlock.GetEnd() != 0)
+                    deleteList.insert(std::make_pair(targetBlock.GetSize(), std::make_pair(j, i)));
             }
         }
         else{
@@ -361,18 +454,99 @@ FPakHandle::FPakHandle(FHandle* Inhandle, int64 InPos, PakFile& InPakFile, PakEn
     : physicalHandle(Inhandle)
     , pakFile(InPakFile)
     , pakEntry(InPakEntry)
-    , FHandle(InPos, InPakEntry.GetUnCompressSize())
+    , blockListIndex(0)
+    , data(nullptr)
+    , FHandle(InPos, InPakEntry.GetCompressSize())
 {}
 
-int64 FPakHandle::Read(uint8* inBuffer, int64 bytesToRead){ return -1;}
-int64 FPakHandle::Write(const uint8* outBrffer, int64 bytesToWrite){ return -1;}
+int64 FPakHandle::Read(uint8* inBuffer, int64 bytesToRead){
+    if(data == nullptr){
+        size = pakEntry.uncompressSize;
+        data = new uint8[size];
+        BlockList& list = pakEntry.blockList;
+        int64 copySize = 0;
+        for(int i = 0; i < list.Size(); i++){
+            physicalHandle -> Seek(list[i].GetStart());
+            int64 read = physicalHandle -> Read(data + copySize, list[i].GetSize());
+            if(read != list[i].GetSize()){
+                DEBUG("FPakHandle::Read read from pak failed");
+                return -1;
+            }
+            else{
+                copySize += read;
+            }
+        }
+    }
+    if(!inBuffer || bytesToRead < 0)
+        return -1;
+    memcpy(inBuffer, data + pos, bytesToRead);
+    return bytesToRead;
+}
+int64 FPakHandle::Write(const uint8* outBuffer, int64 bytesToWrite){
+    if(!outBuffer || bytesToWrite > size - pos)
+        return -1;
+    BlockList& list = pakEntry.blockList;
+    int64 writeSize = 0;
+    while(bytesToWrite > writeSize){
+        int64 leftToWrite = bytesToWrite - writeSize;
+        int64 physicalPos = physicalHandle -> Tell();
+        int64 leftCanWrite = list[blockListIndex].GetEnd() - physicalPos;
+        if(leftToWrite <= leftCanWrite){
+            int64 copySize = physicalHandle -> Write(outBuffer + writeSize, leftToWrite);
+            if(copySize != leftToWrite){
+                DEBUG("FPakHandle::Write Failed, pos : " << physicalPos << " , writeSize : " << leftToWrite);
+                return -1;
+            }
+            pos += copySize;
+            writeSize += copySize;
+            Seek(pos);
+        }
+        else{
+            int64 copySize = physicalHandle -> Write(outBuffer + writeSize, leftCanWrite);
+            if(copySize != leftCanWrite){
+                DEBUG("FPakHandle::Write Failed, pos : " << physicalPos << " , writeSize : " << leftCanWrite);
+                return -1;
+            }
+            pos += copySize;
+            writeSize += copySize;
+            blockListIndex++;
+        }
+    }
+    physicalHandle -> Flush();
+    return writeSize;
+}
 
 bool FPakHandle::Seek(int64 newPosition){
-    newPosition += pakEntry.blockList[0].start;
-    if(physicalHandle -> Seek(newPosition))
-        return true;
-    else
+    if(newPosition < 0)
         return false;
+    BlockList& list = pakEntry.blockList;
+    if(newPosition == size){
+        if(physicalHandle -> Seek(list[list.Size() - 1].GetEnd())){
+            blockListIndex = list.Size() - 1;
+            return true;
+        }
+        else{
+            DEBUG("FPakHandle::Seek physical failed, from : " << list[list.Size() - 1].GetEnd() << " , pos : " << newPosition);
+            return false;
+        }
+    }
+    for(int i = 0; i < list.Size(); i++){
+        if(list[i].GetSize() <= newPosition){
+            newPosition -= list[i].GetSize();
+        }
+        else{
+            if(physicalHandle -> Seek(list[i].GetStart() + newPosition)){
+                blockListIndex = i;
+                return true;
+            }
+            else{
+                DEBUG("FPakHandle::Seek physical failed, from : " << list[i].GetStart() << " , pos : " << newPosition);
+                return false;
+            }
+        }
+    }
+    DEBUG("FPakHandle::Seek out of block range");
+    return false;
 }
 bool FPakHandle::SeekFromEnd(int64 newPosition){
     newPosition += pakEntry.blockList[0].start + pakEntry.GetUnCompressSize();
@@ -414,7 +588,6 @@ FPakLoader::FPakLoader(const char* loaderDir){
     physicalLoader -> FindFiles(files, loaderDir, PAK_EXTENSION);
     for(int i = 0; i < files.Size(); i++){
         pakFiles.PushBack(PakFile());
-        DEBUG((FString(loaderDir) + files[i]).GetStr().c_str());
         FReadArchive* rArchive = new FReadArchive((FString(loaderDir) + files[i]).GetStr().c_str());
         pakFiles[i].initialize(*rArchive);
         delete rArchive;
@@ -468,15 +641,15 @@ bool FPakLoader::FileCopy(const char* fileFrom, const char* fileTo){
     * @return          the read handle of file
     */
 FHandle* FPakLoader::OpenRead(const char* fileName){
+    FString fileStr = fileName;
     for(int i = 0; i < pakFiles.Size(); i++){
         PakEntry pakEntry;
         if(pakFiles[i].FindFile(fileName, pakEntry)){
-            return new FPakHandle(GetPhysicalReadHandle(pakFiles[i].GetFileName().GetStr().c_str()), pakEntry.blockList[0].start, pakFiles[i], pakEntry);
+            return new FPakHandle(GetPhysicalReadHandle(pakFiles[i].GetFileName().GetStr().c_str()), 0, pakFiles[i], pakEntry);
         }
+
     }
     return nullptr;
-    
-
 }
 
 /*
@@ -486,10 +659,11 @@ FHandle* FPakLoader::OpenRead(const char* fileName){
     * @return          the write handle of file
     */
 FHandle* FPakLoader::OpenWrite(const char* fileName, bool append){
+    FString fileStr = fileName;
     for(int i = 0; i < pakFiles.Size(); i++){
         PakEntry pakEntry;
         if(pakFiles[i].FindFile(fileName, pakEntry)){
-            return new FPakHandle(GetPhysicalWriteHandle(pakFiles[i].GetFileName().GetStr().c_str()), pakEntry.blockList[0].start, pakFiles[i], pakEntry);
+            return new FPakHandle(GetPhysicalWriteHandle(pakFiles[i].GetFileName().GetStr().c_str()), 0, pakFiles[i], pakEntry);
         }
     }
     return nullptr;
@@ -546,6 +720,30 @@ void FPakLoader::FindFilesRecursively(FArray<FString>& foundFiles, const char* d
    for(int i = 0; i < pakFiles.Size(); i++){
         pakFiles[i].FindFilesRecursively(foundFiles, directory, extension);
     }
+}
+
+bool FPakLoader::CreatePak(const char* pakName){
+    for(int i = 0; i < pakFiles.Size(); i++){
+        if(pakFiles[i].pakFileName == pakName){
+            return false;
+        }
+    }
+    FHandle* handle = physicalLoader -> OpenWrite(pakName, false);
+    if(!handle)
+        return false;
+    FWriteArchive* wArchive = new FWriteArchive(handle, pakName, 0);
+    pakFiles.PushBack(PakFile(pakName));
+    int32 pos = pakFiles.Size() - 1;
+    pakFiles[pos].Serialize(*wArchive);
+    wArchive -> Flush();
+
+    pakFiles.PushBack(PakFile());
+    FReadArchive* rArchive = new FReadArchive(pakName);
+    pakFiles[pakFiles.Size() - 1].initialize(*rArchive);
+
+    delete rArchive;
+    delete wArchive;
+    return true;
 }
 
 FPakLoader::~FPakLoader(){
