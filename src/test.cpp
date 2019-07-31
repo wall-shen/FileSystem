@@ -9,7 +9,6 @@
 #include <iostream>
 #include <dirent.h>
 #include <stdio.h>
-#include <io.h>
 #include <string.h>
 #include <zlib.h>
 #include <curl/curl.h>
@@ -28,7 +27,9 @@ int main(){
    }
     FPakLoader* pakLoader = FPakLoader::GetFPakLoader();
     pakLoader -> CreatePak("/home/wall/data/test.pak");
+    cout << pakLoader -> pakFiles.Size() << endl;
     pakLoader -> pakFiles[0].Remove("500demo");
+    cout << "500demo over" << endl;
     pakLoader -> pakFiles[0].CreateFile("temp", 190, 190, 0);
     pakLoader -> pakFiles[0].Remove("temp");
     pakLoader -> pakFiles[0].CreateFile("500demo", 500, 500, 0);

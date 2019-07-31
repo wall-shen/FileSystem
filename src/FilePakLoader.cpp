@@ -369,10 +369,53 @@ int64 PakFile::CreateFile(const char* fileName, int64 size, int64 uncompressSize
             // }
         }
 
-        // write to new block
-        newEntryBlockList.PushBack(FileBlock(GetInfo().GetIndexOffset(), GetInfo().GetIndexOffset() + leftToWrite));
+        // alloc second chunk
+        auto secDeleteListIt = deleteList.lower_bound(leftToWrite);
+        if(deleteListIt != deleteList.end()){
 
-        info.indexOffset += leftToWrite;
+            /**
+            * areaPos -> first     offset of block in blockList of entry
+            * areaPos -> second    offset of entry in files
+            */
+            auto areaPos = secDeleteListIt -> second;
+            FileBlock targetBlock = files[areaPos.second].blockList[areaPos.first];
+
+            if(size == targetBlock.GetSize()){
+                deleteList.erase(deleteListIt);
+                files[areaPos.second].blockList[areaPos.first].start = 0;
+                files[areaPos.second].blockList[areaPos.first].end = 0;
+                BlockList& list = files[areaPos.second].blockList;
+                for(int i = 0; i < list.Size(); i++){
+                    if(list[i].GetStart() != 0 || list[i].GetEnd() != 0){
+                        break;
+                    }
+                    if(i == list.Size() - 1){
+                        files.Erase(areaPos.second);
+                    }
+                }
+                // if(files[areaPos.second].blockList.Size() == 1){
+                //     files.Erase(areaPos.second);
+                // }
+                // else{
+                //     files[areaPos.second].blockList.Erase(areaPos.first);
+                //     files[areaPos.second].fBSize--;
+                // }
+            }
+            else{
+                deleteList.erase(deleteListIt);
+                files[areaPos.second].blockList[areaPos.first].start += size;
+                targetBlock.end = files[areaPos.second].blockList[areaPos.first].start;
+                deleteList.insert(std::make_pair(files[areaPos.second].blockList[areaPos.first].GetSize(), std::make_pair(areaPos.first, areaPos.second)));
+            }
+            newEntryBlockList.PushBack(targetBlock);
+        }
+        else{
+            // write to new block
+            newEntryBlockList.PushBack(FileBlock(GetInfo().GetIndexOffset(), GetInfo().GetIndexOffset() + leftToWrite));
+
+            info.indexOffset += leftToWrite;
+        }
+ 
     }
 
     if(!AddEntryToFiles(fileName, size, uncompressSize, compressMethod, newEntryBlockList))
