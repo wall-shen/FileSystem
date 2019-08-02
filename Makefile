@@ -1,5 +1,5 @@
 CC := g++
-CCFLAG := -std=c++14 -lz -lm -lcurl
+CCFLAG := -std=c++14 -lz -lm -lcurl -pthread
 DBGFLAG := -g
 CCOBJFLAG := $(CCFLAG) -c
 

@@ -14,6 +14,15 @@ typedef signed short   int16;
 typedef signed int     int32;
 typedef signed long    int64;
 
+
+enum{
+    DefaultBufferSize = 10240,
+};
+
+enum{
+    HttpRequestLength = 1024,  
+};
+
 enum{
     NativeFile   = 0x00,
     PkgFile      = 0x01,

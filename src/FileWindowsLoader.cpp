@@ -31,11 +31,15 @@ FWindowsHandle::FWindowsHandle(int32 Inhandle, int64 InPos, int64 InSize)
 {}
 
 int64 FWindowsHandle::Read(uint8* inBuffer, int64 bytesToRead){
-    return read(handle, inBuffer, bytesToRead);
+    int64 readSize = read(handle, inBuffer, bytesToRead);
+    pos += readSize;
+    return readSize;
 }
 
 int64 FWindowsHandle::Write(const uint8* outBuffer, int64 bytesToWrite){
-    return write(handle, outBuffer, bytesToWrite);
+    int64 writeSize = write(handle, outBuffer, bytesToWrite);
+    pos += writeSize;
+    return writeSize;
 }
 
 /*
@@ -43,17 +47,30 @@ int64 FWindowsHandle::Write(const uint8* outBuffer, int64 bytesToWrite){
  * @return      true successfully, false wrong, when newPosition > file size return true
  */    
 bool FWindowsHandle::Seek(int64 newPosition){
-    if(lseek(handle, newPosition, SEEK_SET) != -1L)
+    if(lseek(handle, newPosition, SEEK_SET) != -1L){
+        pos = lseek(handle, 0, SEEK_CUR);
         return true;
+    }
     else
         return false;
 }
 
 bool FWindowsHandle::SeekFromEnd(int64 newPosition){
-    if(lseek(handle, newPosition, SEEK_END) != -1L)
+    if(lseek(handle, newPosition, SEEK_END) != -1L){
+        pos = lseek(handle, 0, SEEK_CUR);
         return true;
+    }
     else
         return false;
+}
+
+int64 FWindowsHandle::Tell(){
+    return lseek(handle, 0, SEEK_CUR);
+}
+int64 FWindowsHandle::int64 Size(){
+    size = lseek(handle, 0, SEEK_END);
+    Seek(pos);
+    return size;
 }
 
 bool FWindowsHandle::Flush(){

@@ -14,34 +14,142 @@
 #include <curl/curl.h>
 #include "FileInternetLoader.h"
 #include "FileManager.h"
+#include "Threadpool.h"
 using namespace std;
+// class f{
+//    public:
 
+//    f(int i){
+
+//    }
+// int operator() (int i){
+//    FString s = "/home/wall/data/demo/";
+//    s = s + to_string(i);
+//    FLinuxLoader* loader = FLinuxLoader::GetFLinuxLoader();
+//    loader -> OpenWrite(s.GetStr().c_str(), true);
+//    cout << s.GetStr() << endl;
+//    return 1;
+// }
+// };
 
 int main(){
+   FLinuxLoader* load = FLinuxLoader::GetFLinuxLoader();
+   // FHandle* handle = load -> OpenWrite("/home/wall/data/updateMessage", false);
+   // cJSON *root;
+   // root = cJSON_CreateArray();
+   // for(int i = 0; i < 2000; i++){
+   //    FString s = to_string(i);
+   //    cJSON_AddItemToArray(root, cJSON_CreateString(s.GetStr().c_str()));
+   //    cJSON_AddItemToArray(root, cJSON_CreateString("500data.pak"));
+   //    cJSON_AddItemToArray(root, cJSON_CreateString("md5"));
+   //    cJSON_AddItemToArray(root, cJSON_CreateNumber(i % 500));
+   //    cJSON_AddItemToArray(root, cJSON_CreateNumber(500 - (i % 500)));
+   //    cJSON_AddItemToArray(root, cJSON_CreateNumber(0));
+   // }
 
-   char q[500];
-   for(int j =0 ; j < 5; j++){
-      for(int i = 0; i < 100; i ++){
-         q[i+ 100*j] = 20+i;
+   // char * p = cJSON_PrintUnformatted(root);
+   // int64 size = strlen(p);
+   // handle -> Write((uint8*)p, size);
+
+   FInternetLoader intLoader;
+   FHandle* handle = intLoader.OpenRead("updateMessage");
+   char p [72019];
+   int size = 72019;
+   
+   int writeSize = 0;
+   while(writeSize < 72092){
+      int copySize = handle -> Read((uint8*)(p+writeSize), 1000);
+      if(copySize <= 0){
+         DEBUG("wirte over " << copySize);
+         break;
       }
+      writeSize += copySize;
    }
-    FPakLoader* pakLoader = FPakLoader::GetFPakLoader();
-    pakLoader -> CreatePak("/home/wall/data/test.pak");
-    cout << pakLoader -> pakFiles.Size() << endl;
-    pakLoader -> pakFiles[0].Remove("500demo");
-    cout << "500demo over" << endl;
-    pakLoader -> pakFiles[0].CreateFile("temp", 190, 190, 0);
-    pakLoader -> pakFiles[0].Remove("temp");
-    pakLoader -> pakFiles[0].CreateFile("500demo", 500, 500, 0);
-    FHandle* whandle = pakLoader -> OpenWrite("500demo", false);
-    whandle -> Write((uint8*)q, 500);
-    for(int i = 0; i < pakLoader -> pakFiles.Size(); i++){
-        pakLoader -> pakFiles[i].Print();
+ for(int i = 0 ; i < 2000; i++){
+       cout << p[i];
     }
-    FHandle* rHandle = pakLoader -> OpenRead("500demo");
-    char p[500];
-    rHandle -> Read((uint8*)p, 500);
-    cout << p;
+   // FPakLoader* pakLoader = FPakLoader::GetFPakLoader();
+   // pakLoader -> CreatePak("/home/wall/data/test.pak");
+   // FManager manager;
+   //  manager.Update();
+   //  cout << pakLoader -> pakFiles.Size();
+   // //  for(int i = 0; i < pakLoader -> pakFiles.Size(); i++){
+   // //      pakLoader -> pakFiles[i].Print();
+   // //  }
+   // char p[500];
+   //  FHandle* rHandle = pakLoader -> OpenRead("2");
+
+   //  rHandle -> Read((uint8*)p, 500);
+   //  for(int i = 0 ; i < 500; i++){
+   //     cout << p[i];
+   //  }
+
+   // char* p  = "[\"1\", "",\"md4\", 53, 123]";
+   // cJSON* root;
+   // root = cJSON_Parse(p);
+   // int64 num = cJSON_GetArraySize(root);
+   // cJSON* item;
+   // num /= 4;
+   // for(int i = 0; i < num; i++){
+   //    item = cJSON_GetArrayItem(root , i);
+   //    printf("item type is %d\n",item->type);
+   //  printf("%s\n",item->valuestring);
+   //  item = cJSON_GetArrayItem(root , i+1);
+   //    printf("item type is %d\n",item->type);
+   //  printf("%s\n",item->valuestring);
+   //  item = cJSON_GetArrayItem(root , i+2);
+   //    printf("item type is %d\n",item->type);
+   //  printf("%d\n",item->valueint);
+   //  item = cJSON_GetArrayItem(root , i+3);
+   //    printf("item type is %d\n",item->type);
+   //  printf("%d\n",item->valueint);
+   // }
+
+
+   // char q[500];
+   // for(int j =0 ; j < 50; j++){
+   //    for(int i = 0; i < 10; i ++){
+   //       q[i+ 10*j] = '0'+i;
+   //    }
+   // }
+
+   // cout << q << endl;
+   //  FPakLoader* pakLoader = FPakLoader::GetFPakLoader();
+   //  pakLoader -> CreatePak("/home/wall/data/test.pak");
+   //  cout << pakLoader -> pakFiles.Size() << endl;
+   //  pakLoader -> pakFiles[0].Remove("500demo");
+   //  cout << "500demo over" << endl;
+   //  pakLoader -> pakFiles[0].CreateFile("temp", 190, 190, 0);
+   //  pakLoader -> pakFiles[0].Remove("temp");
+   //  pakLoader -> pakFiles[0].CreateFile("500demo", 500, 500, 0);
+   //  FHandle* whandle = pakLoader -> OpenWrite("500demo", false);
+   //  whandle -> Write((uint8*)q, 500);
+   //  for(int i = 0; i < pakLoader -> pakFiles.Size(); i++){
+   //      pakLoader -> pakFiles[i].Print();
+   //  }
+   // char p[100];
+   //  FHandle* rHandle = pakLoader -> OpenRead("1");
+
+   //  rHandle -> Read((uint8*)p, 100);
+   //  for(int i = 0 ; i < 100; i++){
+   //     cout << p[i];
+   //  }
+   //  rHandle = pakLoader -> OpenRead("2");
+
+   //  rHandle -> Read((uint8*)p, 100);
+   //  cout << p ;
+   //  rHandle = pakLoader -> OpenRead("3");
+
+   //  rHandle -> Read((uint8*)p, 100);
+
+   // rHandle = pakLoader -> OpenRead("4");
+
+   //  rHandle -> Read((uint8*)p, 100);
+   //  cout << p;
+   //  rHandle = pakLoader -> OpenRead("5");
+
+   //  rHandle -> Read((uint8*)p, 100);
+   //  cout << p ;
 
 /**
  * compress resume test

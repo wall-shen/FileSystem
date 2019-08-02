@@ -11,14 +11,12 @@ void PakInfo::Serialize(FArchive& ar){
     }
     ar << indexOffset;  
     ar << indexSize;
-    ar << version;
 }
 
 void PakInfo::Print(){
     std::cout << std::left << std::setw(15) << "magic" << magic << std::endl;
     std::cout << std::left << std::setw(15) << "indexOffset" << indexOffset << std::endl;
     std::cout << std::left << std::setw(15) << "indexSize" << indexSize << std::endl;
-    std::cout << std::left << std::setw(15) << "version" << version << std::endl;
 }
 
 void FileBlock::Print(){
@@ -26,7 +24,7 @@ void FileBlock::Print(){
 }
 
 int64 PakEntry::GetSerializedSize(){
-    int64 retSize = sizeof(version) + sizeof(hashOne) + sizeof(hashTwo) + sizeof(compressSize) + sizeof(uncompressSize) + sizeof(compressMethod) \
+    int64 retSize = sizeof(hashOne) + sizeof(hashTwo) + sizeof(compressSize) + sizeof(uncompressSize) + sizeof(compressMethod) \
          + sizeof(maxBlockSize) + sizeof(fBSize) + sizeof(flag);
     for(int i = 0; i < blockList.Size(); i++){
         retSize += blockList[i].GetSerializeSize();
@@ -35,7 +33,6 @@ int64 PakEntry::GetSerializedSize(){
 }
 
 void PakEntry::Serialize(FArchive& ar){
-    ar << version;
     ar << hashOne;
     ar << hashTwo;
     ar << compressSize;
@@ -59,7 +56,6 @@ void PakEntry::Serialize(FArchive& ar){
 }
 
 void PakEntry::Print(){
-    std::cout << std::left << std::setw(15) << "version" << version << std::endl;
     std::cout << std::left << std::setw(15) << "hashOne" << hashOne << std::endl;
     std::cout << std::left << std::setw(15) << "hashTwo" << hashTwo << std::endl;
     std::cout << std::left << std::setw(15) << "compressSize" << compressSize << std::endl;
@@ -68,8 +64,12 @@ void PakEntry::Print(){
     std::cout << std::left << std::setw(15) << "fbSize" << fBSize << std::endl;
     if(flag == NormalFlag)
         std::cout << std::left << std::setw(15) << "flag" << "normal" << std::endl;
-    else
+    else if(flag == DeletedFlag)
         std::cout << std::left << std::setw(15) << "flag" << "delete" << std::endl;
+    else if(flag == DownloadFlag)
+        std::cout << std::left << std::setw(15) << "flag" << "download" << std::endl;
+    else if(flag == DiscardFlag)
+        std::cout << std::left << std::setw(15) << "flag" << "discard" << std::endl;
     std::cout << std::left << std::setw(15) << "maxBlockSize" << maxBlockSize << std::endl;
     std::cout << std::left << std::setw(15) << "blockList info:" << std::endl;
     for(int i = 0; i < blockList.Size(); i++){
@@ -121,6 +121,22 @@ bool PakFile::Remove(const char* fileName){
             // remove from fileIndex
             index.erase(it);
             entryNum--;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool PakFile::FindFileWithEntryIndex(const char* fileName, PakEntry& pakEntry, int32& entryIndex){
+    if(!fileName)
+        return false;
+    uint32 hashOne = Crc::MemCrc32(fileName, strlen(fileName), Crc::crcValueOne);
+    uint32 hashTwo = Crc::MemCrc32(fileName, strlen(fileName), Crc::crcValueTwo);
+    auto range = index.equal_range(hashOne);
+    for(auto it = range.first ; it != range.second; it++){
+        if((it -> second).first == hashTwo){
+            pakEntry = files[(it -> second).second];
+            entryIndex = (it -> second).second;
             return true;
         }
     }
@@ -186,7 +202,7 @@ bool PakFile::AddEntryToFiles(const char* fileName, uint64 compressSize, uint64 
         if(blockList[i].GetSize() > maxBlockSize)
             maxBlockSize = blockList[i].GetSize();
     }
-    files.PushBack(PakEntry(info.version, hashOne, hashTwo, compressSize, unCompressSize, compressMethod, blockList, maxBlockSize, blockList.Size()));
+    files.PushBack(PakEntry(hashOne, hashTwo, compressSize, unCompressSize, compressMethod, blockList, maxBlockSize, blockList.Size(), DownloadFlag));
     index.insert(std::make_pair(hashOne, std::make_pair(hashTwo, files.Size() - 1)));
     return true;
 }
@@ -313,11 +329,11 @@ int64 PakFile::CreateFile(const char* fileName, int64 size, int64 uncompressSize
             files[areaPos.second].blockList[areaPos.first].end = 0;
             BlockList& list = files[areaPos.second].blockList;
             for(int i = 0; i < list.Size(); i++){
-                if(list[i].GetStart() != 0 || list[i].GetEnd() != 0){
+                if(list[i].GetSize() != 0){
                     break;
                 }
                 if(i == list.Size() - 1){
-                    files.Erase(areaPos.second);
+                    files[areaPos.second].flag = DiscardFlag;
                 }
             }
             // if(files[areaPos.second].blockList.Size() == 1){
@@ -357,7 +373,7 @@ int64 PakFile::CreateFile(const char* fileName, int64 size, int64 uncompressSize
                     break;
                 }
                 if(i == list.Size() - 1){
-                    files.Erase(areaPos.second);
+                    files[areaPos.second].flag = DiscardFlag;
                 }
             }
             // if(files[areaPos.second].blockList.Size() == 1){
@@ -369,9 +385,9 @@ int64 PakFile::CreateFile(const char* fileName, int64 size, int64 uncompressSize
             // }
         }
 
-        // alloc second chunk
+         // alloc second chunk
         auto secDeleteListIt = deleteList.lower_bound(leftToWrite);
-        if(deleteListIt != deleteList.end()){
+        if(secDeleteListIt != deleteList.end()){
 
             /**
             * areaPos -> first     offset of block in blockList of entry
@@ -380,8 +396,8 @@ int64 PakFile::CreateFile(const char* fileName, int64 size, int64 uncompressSize
             auto areaPos = secDeleteListIt -> second;
             FileBlock targetBlock = files[areaPos.second].blockList[areaPos.first];
 
-            if(size == targetBlock.GetSize()){
-                deleteList.erase(deleteListIt);
+            if(leftToWrite == targetBlock.GetSize()){
+                deleteList.erase(secDeleteListIt);
                 files[areaPos.second].blockList[areaPos.first].start = 0;
                 files[areaPos.second].blockList[areaPos.first].end = 0;
                 BlockList& list = files[areaPos.second].blockList;
@@ -390,7 +406,7 @@ int64 PakFile::CreateFile(const char* fileName, int64 size, int64 uncompressSize
                         break;
                     }
                     if(i == list.Size() - 1){
-                        files.Erase(areaPos.second);
+                        files[areaPos.second].flag = DiscardFlag;
                     }
                 }
                 // if(files[areaPos.second].blockList.Size() == 1){
@@ -402,8 +418,8 @@ int64 PakFile::CreateFile(const char* fileName, int64 size, int64 uncompressSize
                 // }
             }
             else{
-                deleteList.erase(deleteListIt);
-                files[areaPos.second].blockList[areaPos.first].start += size;
+                deleteList.erase(secDeleteListIt);
+                files[areaPos.second].blockList[areaPos.first].start += leftToWrite;
                 targetBlock.end = files[areaPos.second].blockList[areaPos.first].start;
                 deleteList.insert(std::make_pair(files[areaPos.second].blockList[areaPos.first].GetSize(), std::make_pair(areaPos.first, areaPos.second)));
             }
@@ -415,10 +431,10 @@ int64 PakFile::CreateFile(const char* fileName, int64 size, int64 uncompressSize
 
             info.indexOffset += leftToWrite;
         }
- 
-    }
 
-    if(!AddEntryToFiles(fileName, size, uncompressSize, compressMethod, newEntryBlockList))
+    }
+    
+    if(!AddEntryToFiles(fileName, 0, uncompressSize, compressMethod, newEntryBlockList))
         return -1;
     entryNum += 1;
     return size;
@@ -430,8 +446,10 @@ void PakFile::Serialize(FArchive& archive){
         archive.Seek(info.GetIndexOffset());
         int64 indexSize = 0;
         for(int i = 0; i < files.Size(); i++){
-            indexSize += files[i].GetSerializedSize();
-            files[i].Serialize(archive);
+            if(files[i].flag != DiscardFlag){
+                indexSize += files[i].GetSerializedSize();
+                files[i].Serialize(archive);                
+            }
         }
         info.indexSize = indexSize;
         archive.Seek(0);
@@ -464,15 +482,18 @@ void PakFile::LoadIndex(FArchive& archive){
     if(!index.empty()){
         index.clear();
     }
+    if(!deleteList.empty()){
+        deleteList.clear();
+    }
     for(int i = 0; i < files.Size(); i++){
         if(files[i].flag == DeletedFlag){
             for(int j = 0; j < files[i].blockList.Size(); j++){
                 FileBlock& targetBlock = files[i].blockList[j];
-                if(targetBlock.GetStart() != 0 || targetBlock.GetEnd() != 0)
+                if(targetBlock.GetSize() != 0)
                     deleteList.insert(std::make_pair(targetBlock.GetSize(), std::make_pair(j, i)));
             }
         }
-        else{
+        else if(files[i].flag == NormalFlag || files[i].flag == DownloadFlag){
             index.insert(std::make_pair(files[i].hashOne, std::make_pair(files[i].hashTwo, i)));
         }
         entryNum++;
@@ -498,9 +519,16 @@ FPakHandle::FPakHandle(FHandle* Inhandle, int64 InPos, PakFile& InPakFile, PakEn
     , pakFile(InPakFile)
     , pakEntry(InPakEntry)
     , blockListIndex(0)
+    , entrySize(0)
     , data(nullptr)
-    , FHandle(InPos, InPakEntry.GetCompressSize())
-{}
+    , FHandle(InPos, InPakEntry.GetUnCompressSize())
+{
+    physicalHandle -> Seek(pakEntry.blockList[0].start);
+
+    for(int i = 0; i < pakEntry.blockList.Size(); i++){
+        entrySize += pakEntry.blockList[i].GetSize();
+    }
+}
 
 int64 FPakHandle::Read(uint8* inBuffer, int64 bytesToRead){
     if(data == nullptr){
@@ -526,7 +554,7 @@ int64 FPakHandle::Read(uint8* inBuffer, int64 bytesToRead){
     return bytesToRead;
 }
 int64 FPakHandle::Write(const uint8* outBuffer, int64 bytesToWrite){
-    if(!outBuffer || bytesToWrite > size - pos)
+    if(!outBuffer || bytesToWrite > entrySize - pos)
         return -1;
     BlockList& list = pakEntry.blockList;
     int64 writeSize = 0;
@@ -553,9 +581,15 @@ int64 FPakHandle::Write(const uint8* outBuffer, int64 bytesToWrite){
             pos += copySize;
             writeSize += copySize;
             blockListIndex++;
+            physicalHandle -> Seek(list[blockListIndex].GetStart());
         }
     }
     physicalHandle -> Flush();
+    pakEntry.compressSize += writeSize;
+    if(pakEntry.compressSize == entrySize){
+        pakEntry.flag = NormalFlag;
+    }
+
     return writeSize;
 }
 
@@ -592,11 +626,7 @@ bool FPakHandle::Seek(int64 newPosition){
     return false;
 }
 bool FPakHandle::SeekFromEnd(int64 newPosition){
-    newPosition += pakEntry.blockList[0].start + pakEntry.GetUnCompressSize();
-    if(physicalHandle -> SeekFromEnd(newPosition))
-        return true;
-    else
-        return false;
+    return false;
 }
 
 bool FPakHandle::Flush(){
@@ -684,11 +714,12 @@ bool FPakLoader::FileCopy(const char* fileFrom, const char* fileTo){
     * @return          the read handle of file
     */
 FHandle* FPakLoader::OpenRead(const char* fileName){
-    FString fileStr = fileName;
     for(int i = 0; i < pakFiles.Size(); i++){
         PakEntry pakEntry;
-        if(pakFiles[i].FindFile(fileName, pakEntry)){
-            return new FPakHandle(GetPhysicalReadHandle(pakFiles[i].GetFileName().GetStr().c_str()), 0, pakFiles[i], pakEntry);
+        int entryIndex = 0;
+        if(pakFiles[i].FindFileWithEntryIndex(fileName, pakEntry, entryIndex)){
+            //if(pakEntry.flag == NormalFlag)
+                return new FPakHandle(GetPhysicalReadHandle(pakFiles[i].GetFileName().GetStr().c_str()), 0, pakFiles[i], pakFiles[i].files[entryIndex]);
         }
 
     }
@@ -702,11 +733,11 @@ FHandle* FPakLoader::OpenRead(const char* fileName){
     * @return          the write handle of file
     */
 FHandle* FPakLoader::OpenWrite(const char* fileName, bool append){
-    FString fileStr = fileName;
     for(int i = 0; i < pakFiles.Size(); i++){
         PakEntry pakEntry;
-        if(pakFiles[i].FindFile(fileName, pakEntry)){
-            return new FPakHandle(GetPhysicalWriteHandle(pakFiles[i].GetFileName().GetStr().c_str()), 0, pakFiles[i], pakEntry);
+        int entryIndex = 0;
+        if(pakFiles[i].FindFileWithEntryIndex(fileName, pakEntry, entryIndex)){
+            return new FPakHandle(GetPhysicalWriteHandle(pakFiles[i].GetFileName().GetStr().c_str()), 0, pakFiles[i], pakFiles[i].files[entryIndex]);
         }
     }
     return nullptr;
@@ -741,24 +772,12 @@ bool FPakLoader::DirectoryDelete(const char* directoryName){
     return lowerFloader -> DirectoryDelete(directoryName);
 }
 
-/*
-    * Find files with extension in the given directory
-    * @param foundFiles    array to save the files found
-    * @param directory     path to find files
-    * @param extension     file filter
-    */
 void FPakLoader::FindFiles(FArray<FString>& foundFiles, const char* directory, const char* extension){
    for(int i = 0; i < pakFiles.Size(); i++){
         pakFiles[i].FindFiles(foundFiles, directory, extension);
     }
 }
 
-    /*
-    * Find files with extension in the given directory recursively
-    * @param foundFiles    array to save the files found
-    * @param directory     path to find files
-    * @param extension     file filter
-    */
 void FPakLoader::FindFilesRecursively(FArray<FString>& foundFiles, const char* directory, const char* extension){
    for(int i = 0; i < pakFiles.Size(); i++){
         pakFiles[i].FindFilesRecursively(foundFiles, directory, extension);
@@ -780,14 +799,34 @@ bool FPakLoader::CreatePak(const char* pakName){
     pakFiles[pos].Serialize(*wArchive);
     wArchive -> Flush();
 
-    pakFiles.PushBack(PakFile());
-    FReadArchive* rArchive = new FReadArchive(pakName);
-    pakFiles[pakFiles.Size() - 1].initialize(*rArchive);
-
-    delete rArchive;
     delete wArchive;
     return true;
 }
+
+
+int64 FPakLoader::Compare(const char* fileName, const char* md5, int64 size){
+    for(int i = 0; i < pakFiles.Size(); i++){
+        PakEntry pakEntry;
+        int entryIndex = 0;
+        if(pakFiles[i].FindFileWithEntryIndex(fileName, pakEntry, entryIndex)){
+            if(pakEntry.getFlag() == NormalFlag && pakEntry.GetCompressSize() == size){
+                return size;
+            }
+            else if(pakEntry.getFlag() == DownLoadFile){
+                return pakEntry.GetCompressSize();
+            }
+        }
+    }
+    return -1;
+}
+
+int64 FPakLoader::CreateEntry(const char* fileName, int64 compressSize, int64 unCompressSize, uint32 compressMethod){
+    if(pakFiles.Size() != 0){
+        return pakFiles[0].CreateFile(fileName, compressSize, unCompressSize, compressMethod);
+    }
+    return -1;
+}
+
 
 FPakLoader::~FPakLoader(){
     for(int i = 0; i < pakFiles.Size(); i++){

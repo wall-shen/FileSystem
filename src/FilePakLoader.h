@@ -8,7 +8,8 @@
 enum{
     NormalFlag   = 0x00,
     DeletedFlag  = 0x01,
-    DownloadFlag = 0x02
+    DownloadFlag = 0x02,
+    DiscardFlag  = 0x03
 };
 
 class PakInfo{
@@ -22,16 +23,14 @@ public:
     // size of index region
     int64 indexSize;
     uint32 magic;
-    uint32 version;
 
 public:
     PakInfo(int64 InIndexOffset = 0, int64 InIndexSize = 0, int32 InVersion = 1)
         : indexOffset(InIndexOffset)
         , indexSize(InIndexSize)
         , magic(PkgMigic)
-        , version(InVersion)
     {
-        indexOffset = sizeof(indexOffset) + sizeof(indexSize) + sizeof(magic) + sizeof(version);
+        indexOffset = sizeof(indexOffset) + sizeof(indexSize) + sizeof(magic);
     }
 
     int64 GetIndexOffset() { return indexOffset; }
@@ -39,7 +38,7 @@ public:
     int64 GetIndexSize() { return indexSize; }
 
     uint64 GetSerializedSize(){
-        uint64 size = sizeof(indexOffset) + sizeof(indexSize) + sizeof(magic) + sizeof(version);
+        uint64 size = sizeof(indexOffset) + sizeof(indexSize) + sizeof(magic);
         return size;
     }
 
@@ -77,7 +76,6 @@ class PakEntry{
 public:
     friend class PakFile;
  
-    uint32 version;
     uint32 hashOne;
     uint32 hashTwo;
     uint64 compressSize;
@@ -90,10 +88,9 @@ public:
 
 public:
     PakEntry() {}
-    PakEntry(uint32 inVersion, uint32 InHashOne, uint32 InHashTwo, uint64 IncompressSize, uint64 InUncompressSize, uint32 InCompressMethod, \
+    PakEntry(uint32 InHashOne, uint32 InHashTwo, uint64 IncompressSize, uint64 InUncompressSize, uint32 InCompressMethod, \
         BlockList& InBlockList, uint64 InMaxBlockSize, uint32 InFbSize,uint8 Inflag = NormalFlag)
-        : version(inVersion)
-        , hashOne(InHashOne)
+        : hashOne(InHashOne)
         , hashTwo(InHashTwo)
         , compressSize(IncompressSize)
         , uncompressSize(InUncompressSize)
@@ -153,14 +150,13 @@ public:
     FString& GetFileName() { return pakFileName; }
     int64 GetSize() { return size; }
     PakIndex& GetIndex() { return index; }
-    uint32 GetVersion() { return info.version; }
-    void SetVersion(uint32 InVersion) { info.version = InVersion; }
     bool Remove(const char* fileName);
     int64 Read(FHandle* handle, PakEntry&, uint8* inBuffer);
     int64 Write(FHandle* handle, const char* fileName, const uint8* outBrffer, int64 bytesToWrite);
     int64 CreateFile(const char* fileName, int64 size, int64 uncompressSize, uint32 compressMethod);
     void FindFiles(FArray<FString> foundfiles, const char* directory, const char* extension);
     void FindFilesRecursively(FArray<FString> foundfiles, const char* directory, const char* extension);
+    bool FindFileWithEntryIndex(const char* fileName, PakEntry& pakEntry, int32& index);
     bool FindFile(const char* fileName, PakEntry& pakEntry);
     PakInfo& GetInfo(){ return info; }
     int32 GetEntryNum() {return entryNum; }
@@ -179,9 +175,9 @@ private:
 class FPakHandle : public FHandle{
 private:
     FHandle* physicalHandle;
-    int64 pos;
+    int64 entrySize;
     const PakFile& pakFile;
-    PakEntry pakEntry;
+    PakEntry& pakEntry;
     uint32 blockListIndex;
     uint8* data;
 public:
@@ -275,6 +271,10 @@ public:
 
     bool CreatFile(const char* pakName);
 
+    int64 Compare(const char* fileName, const char* md5, int64 size);
+
+    int64 CreateEntry(const char* fileName, int64 compressSize, int64 unCompressSize, uint32 compressMethod);
+    
     virtual ~FPakLoader();
 };
 #endif

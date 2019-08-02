@@ -4,9 +4,6 @@
 #include "FileLoaderTypes.h"
 #include "FileString.h"
 
-enum{
-    DefaultBufferSize = 10240,
-};
 
 
 class FArchive{

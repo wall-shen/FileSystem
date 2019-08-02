@@ -81,6 +81,8 @@ public:
     virtual int64 Write(const uint8* outBrffer, int64 bytesToWrite);
     virtual bool Seek(int64 newPosition);
     virtual bool SeekFromEnd(int64 newPosition);
+    virtual int64 Tell();
+    virtual int64 Size();
     virtual bool Flush();
     virtual bool Close();
     virtual ~FWindowsHandle();
@@ -94,6 +96,8 @@ public:
     virtual int64 Write(const uint8* outBrffer, int64 bytesToWrite);
     virtual bool Seek(int64 newPosition);
     virtual bool SeekFromEnd(int64 newPosition);
+    virtual int64 Tell();
+    virtual int64 Size();
     virtual bool Flush();
     virtual bool Close();
     virtual ~FLinuxHandle();

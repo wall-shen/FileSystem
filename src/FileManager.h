@@ -69,5 +69,7 @@ public:
 
     int64 WriteToPak(FHandle* handle, const char* pakName, const char* fileName, int64 size, int32 version);
 
+    void Update();
+
     ~FManager();
 };

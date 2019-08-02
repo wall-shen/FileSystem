@@ -41,8 +41,8 @@ size_t readFromData(void* buffer, size_t size, size_t nmemb, void* userPtr){
     data -> size = jsonSize -> valueint;
     data -> length = jsonLength -> valueint;
     memcpy(data -> data, jsonData -> valuestring, data -> length);
-
-    cJSON_Delete(json);
+    if(json)
+        cJSON_Delete(json);
     return size * nmemb; 
 }
 
@@ -52,6 +52,7 @@ int64 FInternetHandle::Read(uint8* inBuffer, int64 bytesToRead){
     ReadInfo data(inBuffer);
     FString url = FString(ip) + "/download?fileName=" + FString(fileName) + "&pos=" + FString(std::to_string(pos)) + "&length=" + FString(std::to_string(bytesToRead));
     DEBUG(url.GetStr());
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
     curl_easy_setopt(curl, CURLOPT_URL, url.GetStr().c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, readFromData);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
@@ -68,7 +69,6 @@ int64 FInternetHandle::Read(uint8* inBuffer, int64 bytesToRead){
     }
 }
 int64 FInternetHandle::Write(const uint8* outBuffer, int64 bytesToWrite){
-
     return 0;
 }
 bool FInternetHandle::Seek(int64 newPosition){
@@ -292,7 +292,6 @@ void WriteToPak(const uint8* data, uint64 byteToWrite, const char* fileName){
 
    char a[4] = {'q', 'b', 'c', 'd'};
    char c[3] = {'1', '2', '3'};
-   pakFile.SetVersion(1);
    pakFile.Write(handle, "123", (uint8*)a, 4);
    pakFile.Write(handle, "456", (uint8*)c, 3);
 
