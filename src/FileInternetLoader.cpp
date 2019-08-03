@@ -14,55 +14,97 @@ FInternetHandle::FInternetHandle(const char* InIp, const char* InfileName, int64
     curl = curl_easy_init();
 }
 
-class ReadInfo{
+
+class Memory{
 public:
-    uint8* data;
-    uint64 size;
-    uint64 length;
-public:
-    ReadInfo(uint8* Indata = 0, uint64 InSize = 0, uint64 Inlength = 0)
-        : data(Indata)
-        , size(InSize)
-        , length(Inlength)
-    {}
+    uint8* memory;
+    size_t size;
+
+    Memory()
+        : memory(nullptr)
+        , size(0)
+    {
+        memory = (uint8*)malloc(1);
+        if(memory == nullptr){
+            DEBUG("Memory malloc failed!");
+        }
+    }
+
+    ~Memory(){
+        if(memory){
+            free(memory);
+            memory = nullptr;
+        }
+    }
 };
 
-cJSON *json, *jsonLength, *jsonSize, *jsonData;
 size_t readFromData(void* buffer, size_t size, size_t nmemb, void* userPtr){
-    json = cJSON_Parse((char*)buffer);
-    if(!json){
-        return size * nmemb;
+    size_t realsize = size * nmemb;
+    Memory* mem = (Memory*)userPtr;
+
+    if(mem -> memory == nullptr){
+        DEBUG("readFromData memory is nullptr");
+        return 0;
     }
-    char * src = cJSON_Print(json);
-    jsonLength = cJSON_GetObjectItem(json, "length");
-    jsonSize = cJSON_GetObjectItem(json, "size");
-    jsonData = cJSON_GetObjectItem(json, "data");
-    ReadInfo* data = (ReadInfo*)userPtr;
-    data -> size = jsonSize -> valueint;
-    data -> length = jsonLength -> valueint;
-    memcpy(data -> data, jsonData -> valuestring, data -> length);
-    if(json)
-        cJSON_Delete(json);
-    return size * nmemb; 
+    mem->memory = (uint8*)realloc(mem->memory, mem->size + realsize + 1);
+    if(mem->memory == NULL) {
+        //out of memory!
+        DEBUG("read From data not enough memory (realloc returned NULL)n");
+        return 0;
+    }
+
+    memcpy(&(mem->memory[mem->size]), buffer, realsize);
+    mem->size += realsize;
+    mem->memory[mem->size] = 0;
+
+    return realsize;
+    // json = cJSON_Parse((char*)buffer);
+    // if(!json){
+    //     return size * nmemb;
+    // }
+    // jsonLength = cJSON_GetObjectItem(json, "length");
+    // jsonSize = cJSON_GetObjectItem(json, "size");
+    // jsonData = cJSON_GetObjectItem(json, "data");
+    // ReadInfo* data = (ReadInfo*)userPtr;
+    // data -> size = jsonSize -> valueint;
+    // data -> length = jsonLength -> valueint;
+    // memcpy(data -> data, jsonData -> valuestring, data -> length);
+    // if(json)
+    //     cJSON_Delete(json);
+    // return size * nmemb; 
 }
 
 int64 FInternetHandle::Read(uint8* inBuffer, int64 bytesToRead){
     if(!curl)
     return -1;
-    ReadInfo data(inBuffer);
+    Memory chunk;
     FString url = FString(ip) + "/download?fileName=" + FString(fileName) + "&pos=" + FString(std::to_string(pos)) + "&length=" + FString(std::to_string(bytesToRead));
     DEBUG(url.GetStr());
     curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
     curl_easy_setopt(curl, CURLOPT_URL, url.GetStr().c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, readFromData);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &chunk);
 
     curl_easy_perform(curl);
     long retCode = 0;
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &retCode);
+
+    cJSON *json, *jsonLength, *jsonSize, *jsonData;
     if(retCode == 200){
-        pos += data.length;
-        return data.length;      
+        json = cJSON_Parse((char*)chunk.memory);
+        if(!json){
+            DEBUG("Internet Read CJOSN failed");
+            return -1;
+        }
+
+        jsonLength = cJSON_GetObjectItem(json, "length");
+        jsonData = cJSON_GetObjectItem(json, "data");
+        memcpy(inBuffer, jsonData -> valuestring, jsonLength -> valueint);
+        if(json)
+            cJSON_Delete(json);
+
+        pos += jsonLength -> valueint;
+        return jsonLength -> valueint;      
     }
     else{
         return -1;
@@ -97,14 +139,14 @@ FInternetHandle::~FInternetHandle(){
 int64 FInternetLoader::FileSize(const char* fileName){
     CURL* curl;
     CURLcode res;
+    Memory chunk;
     curl = curl_easy_init();
     if(curl){
-        ReadInfo data;
         FString url = FString(ip) + "/download?fileName=" + FString(fileName) + "&pos=0&length=0";
         DEBUG(url.GetStr());
         curl_easy_setopt(curl, CURLOPT_URL, url.GetStr().c_str());
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, readFromData);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &chunk);
 
         res = curl_easy_perform(curl);
         long retCode = 0;
@@ -112,9 +154,20 @@ int64 FInternetLoader::FileSize(const char* fileName){
 
         if(res != 0)
             curl_easy_cleanup(curl);
-        
+
+        cJSON *json, *jsonSize;
         if(retCode == 200){
-            return data.size;
+            json = cJSON_Parse((char*)chunk.memory);
+            if(!json){
+                DEBUG("Internet Read CJOSN failed");
+                return -1;
+            }
+            jsonSize = cJSON_GetObjectItem(json, "size");
+            if(!jsonSize){
+                DEBUG("Get Internet Size, json parse failed");
+                return -1;
+            }
+            return jsonSize -> valueint;
         }
         
     }
@@ -127,12 +180,12 @@ bool FInternetLoader::FileExists(const char* fileName){
     CURLcode res;
     curl = curl_easy_init();
     if(curl){
-        ReadInfo data;
+        Memory chunk;
         FString url = FString(ip) + "/download?fileName=" + FString(fileName) + "&pos=0&length=0";
         DEBUG(url.GetStr());
         curl_easy_setopt(curl, CURLOPT_URL, url.GetStr().c_str());
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, readFromData);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &chunk);
 
         res = curl_easy_perform(curl);
         long retCode = 0;
@@ -141,8 +194,19 @@ bool FInternetLoader::FileExists(const char* fileName){
         if(res != 0)
             curl_easy_cleanup(curl);
         
+        cJSON *json, *jsonSize;
         if(retCode == 200){
-            if(data.size == 0)
+            json = cJSON_Parse((char*)chunk.memory);
+            if(!json){
+                DEBUG("Internet Read CJOSN failed");
+                return -1;
+            }
+            jsonSize = cJSON_GetObjectItem(json, "size");
+            if(!jsonSize){
+                DEBUG("Get Internet Size, json parse failed");
+                return -1;
+            }
+            if(jsonSize -> valueint == 0)
                 return false;
             else
                 return true;

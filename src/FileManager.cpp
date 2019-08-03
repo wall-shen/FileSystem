@@ -222,6 +222,7 @@ void GetTask(TaskList& list){
         DEBUG("GetTask read from " << UpdateMessageFile << " size : " << messageSize << "failed");
         return;
     }
+    DEBUG(josnMessage);
 
     cJSON* JsonArray, *ArrayItem;
     JsonArray = cJSON_Parse((char*)josnMessage);
@@ -230,20 +231,20 @@ void GetTask(TaskList& list){
         return;
     }
 
-    int32 arrSize = cJSON_GetArraySize(JsonArray) / 6;
+    int32 arrSize = cJSON_GetArraySize(JsonArray);
 
-    for(int i = 0; i < arrSize; i++){
-        ArrayItem = cJSON_GetArrayItem(JsonArray, i);
+    for(int i = 0; i < arrSize;){
+        ArrayItem = cJSON_GetArrayItem(JsonArray, i++);
         FString fileName = ArrayItem -> valuestring;
-        ArrayItem = cJSON_GetArrayItem(JsonArray, i + 1);
+        ArrayItem = cJSON_GetArrayItem(JsonArray, i++);
         FString serverFileName = ArrayItem -> valuestring;
-        ArrayItem = cJSON_GetArrayItem(JsonArray, i + 2);
+        ArrayItem = cJSON_GetArrayItem(JsonArray, i++);
         FString md5 = ArrayItem -> valuestring;
-        ArrayItem = cJSON_GetArrayItem(JsonArray, i + 3);
+        ArrayItem = cJSON_GetArrayItem(JsonArray, i++);
         int64 offset = ArrayItem -> valueint;
-        ArrayItem = cJSON_GetArrayItem(JsonArray, i + 4);
+        ArrayItem = cJSON_GetArrayItem(JsonArray, i++);
         int64 size = ArrayItem -> valueint;
-        ArrayItem = cJSON_GetArrayItem(JsonArray, i + 5);
+        ArrayItem = cJSON_GetArrayItem(JsonArray, i++);
         int64 compressMethod = ArrayItem -> valueint;
 
         int64 pos = pakLoader -> Compare(fileName.GetStr().c_str(), md5.GetStr().c_str(), size);
@@ -257,8 +258,6 @@ void GetTask(TaskList& list){
     }
     if(JsonArray)
         cJSON_Delete(JsonArray);
-    if(ArrayItem)
-        cJSON_Delete(ArrayItem);
     // FPakLoader* pakLoader = FPakLoader::GetFPakLoader();
     // pakLoader -> pakFiles[0].CreateFile("1", 100, 100, 0);
     // pakLoader -> pakFiles[0].CreateFile("2", 100, 100, 0);
@@ -279,9 +278,9 @@ void FManager::Update(){
     GetTask(tasklist);
     for(int i = 0; i < tasklist.Size(); i++){
         TaskInfo& info = tasklist[i];
-        // pool.enqueue(DownloadTask{info.mOutFileName, info.mPos, info.mInFileName, info.mOffset, info.mSize});
-        DownloadTask task{info.mOutFileName.GetStr().c_str(), info.mPos, info.mInFileName.GetStr().c_str(), info.mOffset, info.mSize};
-        task();
+        pool.enqueue(DownloadTask{info.mOutFileName.GetStr().c_str(), info.mPos, info.mInFileName.GetStr().c_str(), info.mOffset, info.mSize});
+        // DownloadTask task{info.mOutFileName.GetStr().c_str(), info.mPos, info.mInFileName.GetStr().c_str(), info.mOffset, info.mSize};
+        // task();
     }
 }
 

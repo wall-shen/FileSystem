@@ -51,27 +51,26 @@ int main(){
    // int64 size = strlen(p);
    // handle -> Write((uint8*)p, size);
 
-   FInternetLoader intLoader;
-   FHandle* handle = intLoader.OpenRead("updateMessage");
-   char p [72019];
-   int size = 72019;
+   // FInternetLoader intLoader;
+   // FHandle* handle = intLoader.OpenRead("updateMessage");
+   // char p [72019];
+   // int size = 72019;
    
-   int writeSize = 0;
-   while(writeSize < 72092){
-      int copySize = handle -> Read((uint8*)(p+writeSize), 1000);
-      if(copySize <= 0){
-         DEBUG("wirte over " << copySize);
-         break;
-      }
-      writeSize += copySize;
-   }
- for(int i = 0 ; i < 2000; i++){
-       cout << p[i];
-    }
-   // FPakLoader* pakLoader = FPakLoader::GetFPakLoader();
-   // pakLoader -> CreatePak("/home/wall/data/test.pak");
-   // FManager manager;
-   //  manager.Update();
+   // int writeSize = 0;
+   // while(writeSize < 72092){
+   //    int copySize = handle -> Read((uint8*)(p+writeSize), 10000);
+   //    if(copySize <= 0){
+   //       DEBUG("wirte over " << copySize);
+   //       break;
+   //    }
+   //    writeSize += copySize;
+   // }
+
+   FPakLoader* pakLoader = FPakLoader::GetFPakLoader();
+   pakLoader -> CreatePak("/home/wall/data/test.pak");
+   FManager manager;
+    manager.Update();
+    cout << pakLoader -> pakFiles.Size();
    //  cout << pakLoader -> pakFiles.Size();
    // //  for(int i = 0; i < pakLoader -> pakFiles.Size(); i++){
    // //      pakLoader -> pakFiles[i].Print();
