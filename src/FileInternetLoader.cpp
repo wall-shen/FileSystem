@@ -234,10 +234,10 @@ bool FInternetLoader::FileCopy(const char* fileFrom, const char* fileTo){
     * @return          the read handle of file
     */
 FHandle* FInternetLoader::OpenRead(const char* fileName){
-    int64 fSize = FileSize(fileName);
-    if(fSize == 0)
-        return nullptr;
-    FHandle* retHandle = new FInternetHandle(ip, fileName, 0, fSize);
+    // int64 fSize = FileSize(fileName);
+    // if(fSize == 0)
+    //     return nullptr;
+    FHandle* retHandle = new FInternetHandle(ip, fileName, 0, 0);
     return retHandle;
 }
 

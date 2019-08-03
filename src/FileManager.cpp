@@ -90,33 +90,38 @@ int64 FManager::WriteToPak(FHandle* handle, const char* InpakName, const char* f
     }
     return 0;
 }
-
+static int num = 0;
 class DownloadTask{
+    FString mOutFileName;
+    FString mInFileName;
     FHandle* writeHandle;
     FHandle* readHandle;
     int64 size;
     int32 bufferSize;
     uint8* buffer;
+    int64 mOffset;
+    int64 mPos;
 public:
     DownloadTask(const char* outFileName, int64 pos, const char* inFileName, int64 offset, int64 readSize, int32 InbufferSize = DefaultBufferSize)
         : size(readSize)
+        , mOutFileName(outFileName)
+        , mInFileName(inFileName)
+        , writeHandle(nullptr)
+        , readHandle(nullptr)
+        , buffer(nullptr)
+        , mOffset(offset)
+        , mPos(pos)
         , bufferSize(InbufferSize)
-    {
-        buffer = new uint8[bufferSize];
-        FPakLoader* pakLoader = FPakLoader::GetFPakLoader();
-        writeHandle  = pakLoader -> OpenWrite(outFileName);
-        if(writeHandle)
-            writeHandle -> Seek(pos);
-        FInternetLoader intLoader;
-        readHandle = intLoader.OpenRead(inFileName);
-        if(readHandle)
-            readHandle -> Seek(offset);
-    }
+    {}
 
     DownloadTask(DownloadTask&& temp){
         writeHandle = temp.writeHandle;
         readHandle = temp.readHandle;
         size = temp.size;
+        mOutFileName = temp.mOutFileName;
+        mInFileName = temp.mInFileName;
+        mOffset = temp.mOffset;
+        mPos = temp.mPos;
         bufferSize = temp.bufferSize;
         buffer = temp.buffer;
         temp.writeHandle = nullptr;
@@ -143,6 +148,21 @@ public:
 };
 
 void DownloadTask::operator()(){
+    if(buffer == nullptr){
+        buffer = new uint8[bufferSize];
+    }
+    if(writeHandle == nullptr){
+        FPakLoader* pakLoader = FPakLoader::GetFPakLoader();
+        writeHandle  = pakLoader -> OpenWrite(mOutFileName.GetStr().c_str());
+        if(writeHandle)
+            writeHandle -> Seek(mPos);
+    }
+    if(readHandle == nullptr){
+        FInternetLoader intLoader;
+        readHandle = intLoader.OpenRead(mInFileName.GetStr().c_str());
+        if(readHandle)
+            readHandle -> Seek(mOffset);
+    }
     int32 copySize = 0;
     int64 leftToWrite = size;
     while(leftToWrite > 0){
@@ -222,7 +242,6 @@ void GetTask(TaskList& list){
         DEBUG("GetTask read from " << UpdateMessageFile << " size : " << messageSize << "failed");
         return;
     }
-    DEBUG(josnMessage);
 
     cJSON* JsonArray, *ArrayItem;
     JsonArray = cJSON_Parse((char*)josnMessage);
@@ -273,7 +292,7 @@ void GetTask(TaskList& list){
 }
 
 void FManager::Update(){
-    ThreadPool pool(DefaultThreadNum);
+    ThreadPool pool(16);
     TaskList tasklist;
     GetTask(tasklist);
     for(int i = 0; i < tasklist.Size(); i++){

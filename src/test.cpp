@@ -70,18 +70,18 @@ int main(){
    pakLoader -> CreatePak("/home/wall/data/test.pak");
    FManager manager;
     manager.Update();
-    cout << pakLoader -> pakFiles.Size();
-   //  cout << pakLoader -> pakFiles.Size();
-   // //  for(int i = 0; i < pakLoader -> pakFiles.Size(); i++){
-   // //      pakLoader -> pakFiles[i].Print();
-   // //  }
-   // char p[500];
-   //  FHandle* rHandle = pakLoader -> OpenRead("2");
 
-   //  rHandle -> Read((uint8*)p, 500);
-   //  for(int i = 0 ; i < 500; i++){
-   //     cout << p[i];
-   //  }
+   //  cout << pakLoader -> pakFiles.Size();
+    // for(int i = 0; i < pakLoader -> pakFiles.Size(); i++){
+    //     pakLoader -> pakFiles[i].Print();
+    // }
+   char p[500];
+    FHandle* rHandle = pakLoader -> OpenRead("2");
+
+    rHandle -> Read((uint8*)p, 500);
+    for(int i = 0 ; i < 500; i++){
+       cout << p[i];
+    }
 
    // char* p  = "[\"1\", "",\"md4\", 53, 123]";
    // cJSON* root;

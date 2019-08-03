@@ -737,7 +737,12 @@ FHandle* FPakLoader::OpenWrite(const char* fileName, bool append){
         PakEntry pakEntry;
         int entryIndex = 0;
         if(pakFiles[i].FindFileWithEntryIndex(fileName, pakEntry, entryIndex)){
-            return new FPakHandle(GetPhysicalWriteHandle(pakFiles[i].GetFileName().GetStr().c_str()), 0, pakFiles[i], pakFiles[i].files[entryIndex]);
+            FHandle* phyHandle = GetPhysicalWriteHandle(pakFiles[i].GetFileName().GetStr().c_str());
+            if(!phyHandle){
+                DEBUG("pakLoader OpenWrite create phyHandle failed");
+                return nullptr;
+            }
+            return new FPakHandle(phyHandle, 0, pakFiles[i], pakFiles[i].files[entryIndex]);
         }
     }
     return nullptr;
