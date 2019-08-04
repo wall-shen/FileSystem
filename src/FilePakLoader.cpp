@@ -25,7 +25,7 @@ void FileBlock::Print(){
 
 int64 PakEntry::GetSerializedSize(){
     int64 retSize = sizeof(hashOne) + sizeof(hashTwo) + sizeof(compressSize) + sizeof(uncompressSize) + sizeof(compressMethod) \
-         + sizeof(maxBlockSize) + sizeof(fBSize) + sizeof(flag);
+         + sizeof(maxBlockSize) + sizeof(fBSize) + sizeof(flag) + md5.GetSerializedSize();
     for(int i = 0; i < blockList.Size(); i++){
         retSize += blockList[i].GetSerializeSize();
     }
@@ -35,6 +35,7 @@ int64 PakEntry::GetSerializedSize(){
 void PakEntry::Serialize(FArchive& ar){
     ar << hashOne;
     ar << hashTwo;
+    ar << md5;
     ar << compressSize;
     ar << uncompressSize;
     ar << compressMethod;
@@ -58,6 +59,7 @@ void PakEntry::Serialize(FArchive& ar){
 void PakEntry::Print(){
     std::cout << std::left << std::setw(15) << "hashOne" << hashOne << std::endl;
     std::cout << std::left << std::setw(15) << "hashTwo" << hashTwo << std::endl;
+    std::cout << std::left << std::setw(15) << "md5" << md5.GetStr() << std::endl;
     std::cout << std::left << std::setw(15) << "compressSize" << compressSize << std::endl;
     std::cout << std::left << std::setw(15) << "uncompressSize" << uncompressSize << std::endl;
     std::cout << std::left << std::setw(15) << "compressMethod" << compressMethod << std::endl;
@@ -192,7 +194,7 @@ int64 PakFile::WriteToBlock(FHandle* handle, uint64 startPos, const uint8* outBu
     return copySize;
 }
 
-bool PakFile::AddEntryToFiles(const char* fileName, uint64 compressSize, uint64 unCompressSize, uint32 compressMethod, BlockList& blockList){
+bool PakFile::AddEntryToFiles(const char* fileName, uint64 compressSize, uint64 unCompressSize, uint32 compressMethod, BlockList& blockList, FString md5){
     if(!fileName || compressSize < 0 || unCompressSize < 0 || CompressMethod < 0)
         return false;
     uint32 hashOne = Crc::MemCrc32(fileName, strlen(fileName), Crc::crcValueOne);
@@ -202,12 +204,12 @@ bool PakFile::AddEntryToFiles(const char* fileName, uint64 compressSize, uint64 
         if(blockList[i].GetSize() > maxBlockSize)
             maxBlockSize = blockList[i].GetSize();
     }
-    files.PushBack(PakEntry(hashOne, hashTwo, compressSize, unCompressSize, compressMethod, blockList, maxBlockSize, blockList.Size(), DownloadFlag));
+    files.PushBack(PakEntry(hashOne, hashTwo, compressSize, unCompressSize, compressMethod, blockList, maxBlockSize, blockList.Size(), md5, DownloadFlag));
     index.insert(std::make_pair(hashOne, std::make_pair(hashTwo, files.Size() - 1)));
     return true;
 }
 
-int64 PakFile::Write(FHandle* handle, const char* fileName, const uint8* outBuffer, int64 bytesToWrite){
+int64 PakFile::Write(FHandle* handle, const char* fileName, const uint8* outBuffer, int64 bytesToWrite, FString md5){
     if(!handle || !fileName || !outBuffer || bytesToWrite < 0)
         return -1;
     Remove(fileName);
@@ -299,13 +301,13 @@ int64 PakFile::Write(FHandle* handle, const char* fileName, const uint8* outBuff
         info.indexOffset += copySizeTwo;
     }
 
-    if(!AddEntryToFiles(fileName, compressSize, bytesToWrite, 0, newEntryBlockList))
+    if(!AddEntryToFiles(fileName, compressSize, bytesToWrite, 0, newEntryBlockList, md5))
         return -1;
     entryNum += 1;
     return bytesToWrite;
 }
 
-int64 PakFile::CreateFile(const char* fileName, int64 size, int64 uncompressSize, uint32 compressMethod){
+int64 PakFile::CreateFile(const char* fileName, int64 size, int64 uncompressSize, uint32 compressMethod, FString md5){
     if(!fileName || size <= 0)
         return -1;
     Remove(fileName);
@@ -434,7 +436,7 @@ int64 PakFile::CreateFile(const char* fileName, int64 size, int64 uncompressSize
 
     }
     
-    if(!AddEntryToFiles(fileName, 0, uncompressSize, compressMethod, newEntryBlockList))
+    if(!AddEntryToFiles(fileName, 0, uncompressSize, compressMethod, newEntryBlockList, md5))
         return -1;
     entryNum += 1;
     return size;
@@ -748,7 +750,7 @@ FHandle* FPakLoader::OpenWrite(const char* fileName, bool append){
     return nullptr;
 }
 
-int64 FPakLoader::Write(const char * InpakName, const char* fileName, const uint8* outBuffer, int64 bytesToWrite){
+int64 FPakLoader::Write(const char * InpakName, const char* fileName, const uint8* outBuffer, int64 bytesToWrite, FString md5){
     if(!InpakName || !fileName || !outBuffer || bytesToWrite < 0)
         return -1;
 
@@ -756,7 +758,7 @@ int64 FPakLoader::Write(const char * InpakName, const char* fileName, const uint
     for(int i = 0; i < pakFiles.Size(); i++){
         if(pakName == pakFiles[i].GetFileName()){
             FHandle* handle = GetPhysicalWriteHandle(pakFiles[i].GetFileName().GetStr().c_str());
-            int64 copySize = pakFiles[i].Write(handle, fileName, outBuffer, bytesToWrite);
+            int64 copySize = pakFiles[i].Write(handle, fileName, outBuffer, bytesToWrite, md5);
             delete handle;
             return copySize;
         }
@@ -809,15 +811,15 @@ bool FPakLoader::CreatePak(const char* pakName){
 }
 
 
-int64 FPakLoader::Compare(const char* fileName, const char* md5, int64 size){
+int64 FPakLoader::Compare(const char* fileName, FString md5, int64 size){
     for(int i = 0; i < pakFiles.Size(); i++){
         PakEntry pakEntry;
         int entryIndex = 0;
         if(pakFiles[i].FindFileWithEntryIndex(fileName, pakEntry, entryIndex)){
-            if(pakEntry.getFlag() == NormalFlag && pakEntry.GetCompressSize() == size){
+            if(pakEntry.getFlag() == NormalFlag && pakEntry.md5 == md5 && pakEntry.GetCompressSize() == size){
                 return size;
             }
-            else if(pakEntry.getFlag() == DownLoadFile){
+            else if(pakEntry.getFlag() == DownLoadFile && pakEntry.md5 == md5){
                 return pakEntry.GetCompressSize();
             }
         }
@@ -825,9 +827,9 @@ int64 FPakLoader::Compare(const char* fileName, const char* md5, int64 size){
     return -1;
 }
 
-int64 FPakLoader::CreateEntry(const char* fileName, int64 compressSize, int64 unCompressSize, uint32 compressMethod){
+int64 FPakLoader::CreateEntry(const char* fileName, int64 compressSize, int64 unCompressSize, uint32 compressMethod, FString md5){
     if(pakFiles.Size() != 0){
-        return pakFiles[0].CreateFile(fileName, compressSize, unCompressSize, compressMethod);
+        return pakFiles[0].CreateFile(fileName, compressSize, unCompressSize, compressMethod, md5);
     }
     return -1;
 }

@@ -85,7 +85,7 @@ int64 FManager::WriteToPak(FHandle* handle, const char* InpakName, const char* f
                 //         return resume.GetPos();
                 // }
             }
-            pakLoader -> Write(InpakName, fileName, resume.GetData(), size);
+            pakLoader -> Write(InpakName, fileName, resume.GetData(), size, "");
         }
     }
     return 0;
@@ -266,9 +266,9 @@ void GetTask(TaskList& list){
         ArrayItem = cJSON_GetArrayItem(JsonArray, i++);
         int64 compressMethod = ArrayItem -> valueint;
 
-        int64 pos = pakLoader -> Compare(fileName.GetStr().c_str(), md5.GetStr().c_str(), size);
+        int64 pos = pakLoader -> Compare(fileName.GetStr().c_str(), md5, size);
         if(pos == -1){
-            pakLoader -> CreateEntry(fileName.GetStr().c_str(), size, size, compressMethod);
+            pakLoader -> CreateEntry(fileName.GetStr().c_str(), size, size, compressMethod, md5);
             list.PushBack(TaskInfo(fileName, serverFileName, 0, offset, size));
         }
         else if(pos != size){

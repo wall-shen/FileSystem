@@ -356,8 +356,8 @@ void WriteToPak(const uint8* data, uint64 byteToWrite, const char* fileName){
 
    char a[4] = {'q', 'b', 'c', 'd'};
    char c[3] = {'1', '2', '3'};
-   pakFile.Write(handle, "123", (uint8*)a, 4);
-   pakFile.Write(handle, "456", (uint8*)c, 3);
+   pakFile.Write(handle, "123", (uint8*)a, 4, "");
+   pakFile.Write(handle, "456", (uint8*)c, 3, "");
 
    pakFile.Serialize(*wArchive);
 
@@ -368,7 +368,7 @@ void WriteToPak(const uint8* data, uint64 byteToWrite, const char* fileName){
 
     PakFile pakFile1;
     pakFile1.initialize(*rArchive);
-    pakFile1.Write(handle, fileName, data, byteToWrite);
+    pakFile1.Write(handle, fileName, data, byteToWrite, "");
     handle -> Flush();
 
     PakEntry pakEntry;

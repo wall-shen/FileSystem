@@ -34,6 +34,36 @@ using namespace std;
 
 int main(){
    FLinuxLoader* load = FLinuxLoader::GetFLinuxLoader();
+
+   // uint8 p[] = "this is test";
+   // uint8 result[16];
+   // MD5_CTX md5;
+   // MD5Init(&md5);
+   // MD5Update(&md5, p, strlen((char*)p));
+   // MD5Final(&md5, result);
+   // for (int i = 0; i<16; i++)
+	// {
+	// 	printf("%02x", result[i]);  
+	// }
+
+
+   FPakLoader* pakLoader = FPakLoader::GetFPakLoader();
+   pakLoader -> CreatePak("/home/wall/data/test.pak");
+   FManager manager;
+   manager.Update();
+
+   cout << pakLoader -> pakFiles.Size();
+   for(int i = 0; i < pakLoader -> pakFiles.Size(); i++){
+      pakLoader -> pakFiles[i].Print();
+   }
+   char p[500];
+    FHandle* rHandle = pakLoader -> OpenRead("2");
+
+    rHandle -> Read((uint8*)p, 500);
+    for(int i = 0 ; i < 500; i++){
+       cout << p[i];
+    }
+
    // FHandle* handle = load -> OpenWrite("/home/wall/data/updateMessage", false);
    // cJSON *root;
    // root = cJSON_CreateArray();
@@ -66,22 +96,6 @@ int main(){
    //    writeSize += copySize;
    // }
 
-   FPakLoader* pakLoader = FPakLoader::GetFPakLoader();
-   pakLoader -> CreatePak("/home/wall/data/test.pak");
-   FManager manager;
-    manager.Update();
-
-   //  cout << pakLoader -> pakFiles.Size();
-    // for(int i = 0; i < pakLoader -> pakFiles.Size(); i++){
-    //     pakLoader -> pakFiles[i].Print();
-    // }
-   char p[500];
-    FHandle* rHandle = pakLoader -> OpenRead("2");
-
-    rHandle -> Read((uint8*)p, 500);
-    for(int i = 0 ; i < 500; i++){
-       cout << p[i];
-    }
 
    // char* p  = "[\"1\", "",\"md4\", 53, 123]";
    // cJSON* root;

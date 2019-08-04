@@ -79,6 +79,7 @@ public:
     uint32 hashOne;
     uint32 hashTwo;
     uint64 compressSize;
+    FString md5;
     uint64 uncompressSize;
     uint32 compressMethod;
     BlockList blockList;
@@ -89,9 +90,10 @@ public:
 public:
     PakEntry() {}
     PakEntry(uint32 InHashOne, uint32 InHashTwo, uint64 IncompressSize, uint64 InUncompressSize, uint32 InCompressMethod, \
-        BlockList& InBlockList, uint64 InMaxBlockSize, uint32 InFbSize,uint8 Inflag = NormalFlag)
+        BlockList& InBlockList, uint64 InMaxBlockSize, uint32 InFbSize, FString InMd5,uint8 Inflag = NormalFlag)
         : hashOne(InHashOne)
         , hashTwo(InHashTwo)
+        , md5(InMd5)
         , compressSize(IncompressSize)
         , uncompressSize(InUncompressSize)
         , compressMethod(InCompressMethod)
@@ -152,8 +154,8 @@ public:
     PakIndex& GetIndex() { return index; }
     bool Remove(const char* fileName);
     int64 Read(FHandle* handle, PakEntry&, uint8* inBuffer);
-    int64 Write(FHandle* handle, const char* fileName, const uint8* outBrffer, int64 bytesToWrite);
-    int64 CreateFile(const char* fileName, int64 size, int64 uncompressSize, uint32 compressMethod);
+    int64 Write(FHandle* handle, const char* fileName, const uint8* outBrffer, int64 bytesToWrite, FString md5);
+    int64 CreateFile(const char* fileName, int64 size, int64 uncompressSize, uint32 compressMethod, FString md5);
     void FindFiles(FArray<FString> foundfiles, const char* directory, const char* extension);
     void FindFilesRecursively(FArray<FString> foundfiles, const char* directory, const char* extension);
     bool FindFileWithEntryIndex(const char* fileName, PakEntry& pakEntry, int32& index);
@@ -165,7 +167,7 @@ public:
     ~PakFile(){}
 
 private:
-    bool AddEntryToFiles(const char* fileName, uint64 compressSize, uint64 unCompressSize, uint32 compressMethod, BlockList& blockList);
+    bool AddEntryToFiles(const char* fileName, uint64 compressSize, uint64 unCompressSize, uint32 compressMethod, BlockList& blockList, FString md5);
     void LoadIndex(FArchive&);
     int64 WriteToBlock(FHandle* handle, uint64 startPos, const uint8* outBuffer, int64 byteToWrite);
     bool IsValid() { return isValid; }
@@ -242,7 +244,7 @@ public:
      */
     virtual FHandle* OpenWrite(const char* fileName, bool append = false);
 
-    int64 Write(const char * pakName, const char* fileName, const uint8* outBrffer, int64 bytesToWrite);
+    int64 Write(const char * pakName, const char* fileName, const uint8* outBrffer, int64 bytesToWrite, FString md5);
 
     // Directory operation
     virtual bool DirectoryExist(const char* directoryName);
@@ -271,9 +273,9 @@ public:
 
     bool CreatFile(const char* pakName);
 
-    int64 Compare(const char* fileName, const char* md5, int64 size);
+    int64 Compare(const char* fileName, FString md5, int64 size);
 
-    int64 CreateEntry(const char* fileName, int64 compressSize, int64 unCompressSize, uint32 compressMethod);
+    int64 CreateEntry(const char* fileName, int64 compressSize, int64 unCompressSize, uint32 compressMethod, FString md5);
     
     virtual ~FPakLoader();
 };
