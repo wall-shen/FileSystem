@@ -121,6 +121,12 @@ public:
         return s;
     }
 
+    FString GetFileNameWithoutExtension(){
+        int pos = str.rfind('.');
+        FString s = str.substr(0, pos);
+        return s;
+    }
+
     FString GetNextStr(FString cutStr){
         int pos = str.find(cutStr.GetStr());
         FString s = str.substr(pos + cutStr.GetSize());

@@ -886,9 +886,50 @@ int64 FPakLoader::CreateEntry(const char* fileName, int64 compressSize, int64 un
     return -1;
 }
 
-bool FPakLoader::ReSize(const char* pakName){
+bool FPakLoader::ReSize(FString pakName){
     for(int i = 0; i < pakFiles.Size(); i++){
-        
+        if(pakFiles[i].pakFileName == pakName){
+            FString newPakName = pakName + "~";
+            CreatePak(newPakName.GetStr().c_str());
+
+            FHandle* readHandle = physicalLoader -> OpenRead(pakName.GetStr().c_str());
+            FHandle* writeHandle = physicalLoader -> OpenWrite(newPakName.GetStr().c_str(), false);
+            PakFile& rePak = pakFiles[i];
+            PakFile& tarPak = pakFiles[pakFiles.Size() -1];
+            writeHandle -> Seek(tarPak.info.GetSerializedSize());
+
+            for(int j = 0; j < rePak.files.Size() && rePak.files[j].flag == NormalFlag; j++){
+                int64 startPos = writeHandle -> Tell();
+                BlockList& list = rePak.files[j].blockList;
+                uint8 data[rePak.files[j].compressSize];
+                int64 copySize = 0;
+                for(int m = 0; m < list.Size(); m++){
+                    readHandle -> Seek(list[m].GetStart());
+                    int64 readSize = readHandle -> Read(data + copySize, list[i].GetSize());
+                    copySize += readSize;
+                }
+                int64 writeSize = writeHandle -> Write(data, copySize);
+                if(writeSize != copySize){
+                    DEBUG("ReSize write Failed, pos " << writeHandle -> Tell());
+                    return false;
+                }
+                int64 endPos = writeHandle -> Tell();
+                BlockList newList;
+                newList.PushBack(FileBlock(startPos, endPos));
+                PakEntry& entry = rePak.files[j];
+                tarPak.files.PushBack(PakEntry(entry.hashOne, entry.hashTwo, entry.compressSize, entry.uncompressSize, entry.compressMethod, newList, copySize, newList.Size(), entry.md5, NormalFlag));
+                tarPak.index.insert(std::make_pair(entry.hashOne, std::make_pair(entry.hashTwo, tarPak.files.Size() - 1)));
+            }
+            if(readHandle){
+                delete readHandle;
+                readHandle = nullptr;
+            }
+            if(writeHandle){
+                delete writeHandle;
+                writeHandle = nullptr;
+            }
+            return true;
+        }
     }
     return false;
 }
@@ -898,5 +939,45 @@ FPakLoader::~FPakLoader(){
         FWriteArchive* wArchive = new FWriteArchive(pakFiles[i].pakFileName.GetStr().c_str(), 0);
         pakFiles[i].Serialize(*wArchive);
         delete wArchive;
+    }
+}
+
+void Combine(){
+    FString dir = "/home/wall/data/temp/";
+    DIR* pDir = opendir(dir.GetStr().c_str());
+    dirent* entry;
+
+    if(pDir == nullptr){
+        DEBUG("combine opendir failed");
+        return;
+    }
+
+    while((entry = readdir(pDir)) != nullptr){
+        FString fileName = entry -> d_name;
+        if(fileName.EndWith("downloading")){
+            FLinuxLoader* phyLoader = FLinuxLoader::GetFLinuxLoader();
+            FPakLoader* pakLoader = FPakLoader::GetFPakLoader();
+
+            FString targetPath = dir + fileName;
+            FHandle* readHandle = phyLoader -> OpenRead(targetPath.GetStr().c_str());
+            int64 fileSize = phyLoader -> FileSize(targetPath.GetStr().c_str());
+            uint8 data[fileSize];
+            int64 readSize = readHandle -> Read(data, fileSize);
+            if(readSize != fileSize){
+                DEBUG("combine read failed");
+                return;
+            }
+
+            FString pakName = fileName.GetFileNameWithoutExtension();
+            FHandle* writeHandle = pakLoader -> OpenWrite(pakName.GetStr().c_str());
+            int64 writeSize = writeHandle -> Write(data, fileSize);
+            if(writeSize != fileSize){
+                DEBUG("combine write failed");
+                return;
+            }
+
+            delete writeHandle;
+            delete readHandle;
+        }
     }
 }

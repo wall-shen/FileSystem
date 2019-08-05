@@ -1,8 +1,9 @@
 #ifndef FILELOADERTYPESH
 #define FILELOADERTYPESH
 
-#define INTERNET_IP             "http://162.219.126.98:8001"
+// #define INTERNET_IP             "http://162.219.126.98:8001"
 // #define INTERNET_IP "http://127.0.0.1:8001"
+#define INTERNET_IP "http://10.240.149.34:8001"
 #define PAKLOADER_DIRECTORY     "/home/wall/data/"
 #define PAK_EXTENSION           ".pak"
 

@@ -14,38 +14,60 @@
 #include <curl/curl.h>
 #include <cstdlib>
 #include <time.h>
+#include <sys/time.h>
 #include "FileInternetLoader.h"
 #include "FileManager.h"
 #include "Threadpool.h"
 using namespace std;
-// class f{
-//    public:
-
-//    f(int i){
-
-//    }
-// int operator() (int i){
-//    FString s = "/home/wall/data/demo/";
-//    s = s + to_string(i);
-//    FLinuxLoader* loader = FLinuxLoader::GetFLinuxLoader();
-//    loader -> OpenWrite(s.GetStr().c_str(), true);
-//    cout << s.GetStr() << endl;
-//    return 1;
-// }
-// };
-
-
 
 int main(){
-   clock_t start;
-   clock_t end;
-   start = clock();
-
-
-
-   
+   /**
+    * write direct demo
+    */
    FLinuxLoader* load = FLinuxLoader::GetFLinuxLoader();
+   timeval timeStart, timeEnd;
+   gettimeofday(&timeStart, NULL);
 
+   FPakLoader* pakLoader = FPakLoader::GetFPakLoader();
+   pakLoader -> CreatePak("/home/wall/data/test.pak");
+   FManager manager;
+   manager.Update();
+   gettimeofday(&timeEnd, NULL);
+   double costTime = (timeEnd.tv_sec-timeStart.tv_sec) + (timeEnd.tv_usec-timeStart.tv_usec)/1000000.0;
+
+   // for(int i = 0; i < pakLoader -> pakFiles.Size(); i++){
+   //    pakLoader -> pakFiles[i].Print();
+   // }
+   DEBUG("Download cost time " << costTime << "s");
+
+   /**
+    * write test demo
+    */
+   // FLinuxLoader* load = FLinuxLoader::GetFLinuxLoader();
+   // timeval timeStart, timeEnd;
+   // gettimeofday(&timeStart, NULL);
+
+   // FPakLoader* pakLoader = FPakLoader::GetFPakLoader();
+   // pakLoader -> CreatePak("/home/wall/data/test.pak");
+   // FManager manager;
+   // manager.Update();
+   // gettimeofday(&timeEnd, NULL);
+   // double costTime = (timeEnd.tv_sec-timeStart.tv_sec) + (timeEnd.tv_usec-timeStart.tv_usec)/1000000.0;
+   // DEBUG("Download cost time " << costTime << "s");
+   // gettimeofday(&timeStart, NULL);
+   // Combine();
+
+   // // for(int i = 0; i < pakLoader -> pakFiles.Size(); i++){
+   // //    pakLoader -> pakFiles[i].Print();
+   // // }
+   // gettimeofday(&timeEnd, NULL);
+   // costTime = (timeEnd.tv_sec-timeStart.tv_sec) + (timeEnd.tv_usec-timeStart.tv_usec)/1000000.0;
+   // DEBUG("Write cost time " << costTime << "s");
+
+
+      /**
+    * MD5 test
+    */
    // uint8 p[] = "this is test";
    // uint8 result[16];
    // MD5_CTX md5;
@@ -58,15 +80,6 @@ int main(){
 	// }
 
 
-   FPakLoader* pakLoader = FPakLoader::GetFPakLoader();
-   pakLoader -> CreatePak("/home/wall/data/test.pak");
-   FManager manager;
-   manager.Update();
-
-   for(int i = 0; i < pakLoader -> pakFiles.Size(); i++){
-      pakLoader -> pakFiles[i].Print();
-   }
-   
    // FHandle* rHandle = pakLoader -> OpenRead("2");
    // int64 readSize= pakLoader-> FileSize("2");
    // cout << readSize << endl;
@@ -76,8 +89,6 @@ int main(){
    //     cout << p[i];
    //  }
 
-   end = clock();
-   cout << "the time is " << (double)(end -start)/CLOCKS_PER_SEC << " s" << endl;
    // FInternetLoader intLoader;
    // FHandle* handle = intLoader.OpenRead("updateMessage");
    // char p [72019];

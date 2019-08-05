@@ -4,6 +4,7 @@
 #include "FileLoader.h"
 #include "FileArchive.h"
 #include <map>
+#include <dirent.h>
 
 enum{
     NormalFlag   = 0x00,
@@ -276,10 +277,51 @@ public:
 
     int64 Compare(const char* fileName, FString md5, int64 size);
 
-    bool ReSize(const char* pakName);
+    bool ReSize(FString pakName);
 
     int64 CreateEntry(const char* fileName, int64 compressSize, int64 unCompressSize, uint32 compressMethod, FString md5);
     
     virtual ~FPakLoader();
 };
+
+void Combine();
+// void Combine(){
+//     FString dir = "/home/wall/data/temp/";
+//     DIR* pDir = opendir(dir.GetStr().c_str());
+//     dirent* entry;
+
+//     if(pDir == nullptr){
+//         DEBUG("combine opendir failed");
+//         return;
+//     }
+
+//     while((entry = readdir(pDir)) != nullptr){
+//         FString fileName = entry -> d_name;
+//         if(fileName.EndWith("downloading")){
+//             FLinuxLoader* phyLoader = FLinuxLoader::GetFLinuxLoader();
+//             FPakLoader* pakLoader = FPakLoader::GetFPakLoader();
+
+//             FString targetPath = dir + fileName;
+//             FHandle* readHandle = phyLoader -> OpenRead(targetPath.GetStr().c_str());
+//             int64 fileSize = phyLoader -> FileSize(targetPath.GetStr().c_str());
+//             uint8 data[fileSize];
+//             int64 readSize = readHandle -> Read(data, fileSize);
+//             if(readSize != fileSize){
+//                 DEBUG("combine read failed");
+//                 return;
+//             }
+
+//             FString pakName = fileName.GetFileNameWithoutExtension();
+//             FHandle* writeHandle = pakLoader -> OpenWrite(pakName.GetStr().c_str());
+//             int64 writeSize = writeHandle -> Write(data, fileSize);
+//             if(writeSize != fileSize){
+//                 DEBUG("combine write failed");
+//                 return;
+//             }
+
+//             delete writeHandle;
+//             delete readHandle;
+//         }
+//     }
+// }
 #endif
