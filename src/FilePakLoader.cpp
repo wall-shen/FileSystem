@@ -552,9 +552,58 @@ int64 FPakHandle::Read(uint8* inBuffer, int64 bytesToRead){
     }
     if(!inBuffer || bytesToRead < 0)
         return -1;
-    memcpy(inBuffer, data + pos, bytesToRead);
-    return bytesToRead;
+    if(bytesToRead >= size - pos){
+        memcpy(inBuffer, data + pos, bytesToRead);
+        pos += bytesToRead;
+        return bytesToRead;
+    }
+    else{
+        int64 readSize = size = pos;
+        memcpy(inBuffer, data + pos, readSize);
+        pos = size;
+        return readSize;
+    }
 }
+
+bool FPakHandle::CompareMd5(){
+    int64 ReadSize = pakEntry.uncompressSize;
+    data = new uint8[ReadSize];
+    BlockList& list = pakEntry.blockList;
+    int64 copySize = 0;
+    FPhysicalLoader* phyLoader = FLinuxLoader::GetFLinuxLoader();
+    DEBUG(pakFile.pakFileName.GetStr().c_str());
+    FHandle* readHandle = phyLoader -> OpenRead(pakFile.pakFileName.GetStr().c_str());
+    for(int i = 0; i < list.Size(); i++){
+        if(!readHandle -> Seek(list[i].GetStart())){
+            DEBUG("FPakHandle Seek Failed");
+        }
+        int64 read = readHandle -> Read(data + copySize, list[i].GetSize());
+        DEBUG("FPakHandle::CompareMd5 read size " << read);
+        if(read != list[i].GetSize()){
+            DEBUG("FPakHandle::Read read from pak failed");
+            return false;
+        }
+        else{
+            copySize += read;
+        }
+    }
+    uint8 result[16];
+    MD5_CTX md5;
+    MD5Init(&md5);
+    MD5Update(&md5, (uint8*)data, ReadSize);
+    MD5Final(&md5, result);
+    char re[17];
+    memcpy((char*)re, (char*)result, 16);
+    re[16] = '\0';
+    FString md5Str = re;
+    if(md5Str == pakEntry.md5)
+        return true;
+    else{
+        DEBUG(pakEntry.hashOne << " compare md5 failed!");
+        return false;
+    }
+}
+
 int64 FPakHandle::Write(const uint8* outBuffer, int64 bytesToWrite){
     if(!outBuffer || bytesToWrite > entrySize - pos)
         return -1;
@@ -589,9 +638,8 @@ int64 FPakHandle::Write(const uint8* outBuffer, int64 bytesToWrite){
     physicalHandle -> Flush();
     pakEntry.compressSize += writeSize;
     if(pakEntry.compressSize == entrySize){
-        pakEntry.flag = NormalFlag;
+            pakEntry.flag = NormalFlag;
     }
-
     return writeSize;
 }
 
@@ -648,6 +696,10 @@ bool FPakHandle::Close(){
 FPakHandle::~FPakHandle(){
     if(physicalHandle)
         Close();
+    if(data){
+        delete data;
+        data = nullptr;
+    }
 }
 
 
@@ -834,6 +886,12 @@ int64 FPakLoader::CreateEntry(const char* fileName, int64 compressSize, int64 un
     return -1;
 }
 
+bool FPakLoader::ReSize(const char* pakName){
+    for(int i = 0; i < pakFiles.Size(); i++){
+        
+    }
+    return false;
+}
 
 FPakLoader::~FPakLoader(){
     for(int i = 0; i < pakFiles.Size(); i++){

@@ -1,3 +1,4 @@
+# coding=gbk
 from flask import Flask, request, jsonify
 import json;
 import sys;
@@ -5,7 +6,7 @@ import os;
 
 app = Flask(__name__)
 
-DefaultPath = '/home/wall/data/'
+DefaultPath = '/home/wall/'
 
 @app.route('/download', methods=['GET', 'POST'])
 def ReadFile():
@@ -19,18 +20,22 @@ def ReadFile():
             size = os.path.getsize(fileName)        
 
             if pos < 0 or length <= 0:
-                result = json.jsonify(length = 0, data = '', size = size)
+                result = jsonify(length = 0, data = '', size = size)
                 print(result)
                 return result
-            fp = open(fileName, 'r')
-            fp.seek(pos, 0)
-            data = fp.read(length)
-            print(data)
-            length = len(data)
-            
-            result = jsonify(length = length, data = data, size = size)
-            print(result)
-            return result
+
+            with open(fileName, 'r', encoding="ascii", errors="surrogateescape") as f:
+            #fp = open(fileName, 'r')
+            #fp.seek(pos, 0)
+            #data = fp.read(length)
+                f.seek(pos, 0)
+                data = f.read(length)
+                #print(data)
+                length = len(data)
+                
+                result = jsonify(length = length, data = data, size = size)
+                print(result)
+                return result
         result = jsonify(length = 0, data = '', size = 0)
         return result
 
@@ -39,6 +44,6 @@ def hello():
     return 'hello'
 
 if __name__ == '__main__':
-    app.run(host = '0.0.0.0' , port = 8001)
+    app.run(host = '127.0.0.1' , port = 8001)
         
     

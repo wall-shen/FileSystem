@@ -1,7 +1,7 @@
 #include "FileManager.h"
 #include "Threadpool.h"
 
-#define DefaultThreadNum 10
+#define DefaultThreadNum 16
 
 #define UpdateMessageFile "updateMessage"
 
@@ -277,18 +277,7 @@ void GetTask(TaskList& list){
     }
     if(JsonArray)
         cJSON_Delete(JsonArray);
-    // FPakLoader* pakLoader = FPakLoader::GetFPakLoader();
-    // pakLoader -> pakFiles[0].CreateFile("1", 100, 100, 0);
-    // pakLoader -> pakFiles[0].CreateFile("2", 100, 100, 0);
-    // pakLoader -> pakFiles[0].CreateFile("3", 100, 100, 0);
-    // pakLoader -> pakFiles[0].CreateFile("4", 100, 100, 0);
-    // pakLoader -> pakFiles[0].CreateFile("5", 100, 100, 0);
 
-
-    // list.PushBack(TaskInfo("2", "500data.pak", 0, 100, 100));
-    // list.PushBack(TaskInfo("3", "500data.pak", 0, 200, 100));
-    // list.PushBack(TaskInfo("4", "500data.pak", 0, 300, 100));
-    // list.PushBack(TaskInfo("5", "500data.pak", 0, 400, 100));
 }
 
 void FManager::Update(){
@@ -302,5 +291,5 @@ void FManager::Update(){
         // task();
     }
 }
-
+ 
 FManager::~FManager(){}

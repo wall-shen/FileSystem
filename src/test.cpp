@@ -12,6 +12,8 @@
 #include <string.h>
 #include <zlib.h>
 #include <curl/curl.h>
+#include <cstdlib>
+#include <time.h>
 #include "FileInternetLoader.h"
 #include "FileManager.h"
 #include "Threadpool.h"
@@ -32,7 +34,16 @@ using namespace std;
 // }
 // };
 
+
+
 int main(){
+   clock_t start;
+   clock_t end;
+   start = clock();
+
+
+
+   
    FLinuxLoader* load = FLinuxLoader::GetFLinuxLoader();
 
    // uint8 p[] = "this is test";
@@ -52,35 +63,21 @@ int main(){
    FManager manager;
    manager.Update();
 
-   cout << pakLoader -> pakFiles.Size();
    for(int i = 0; i < pakLoader -> pakFiles.Size(); i++){
       pakLoader -> pakFiles[i].Print();
    }
-   char p[500];
-    FHandle* rHandle = pakLoader -> OpenRead("2");
+   
+   // FHandle* rHandle = pakLoader -> OpenRead("2");
+   // int64 readSize= pakLoader-> FileSize("2");
+   // cout << readSize << endl;
+   // char p[readSize];
+   //  rHandle -> Read((uint8*)p, readSize);
+   //  for(int i = readSize - 500 ; i < readSize; i++){
+   //     cout << p[i];
+   //  }
 
-    rHandle -> Read((uint8*)p, 500);
-    for(int i = 0 ; i < 500; i++){
-       cout << p[i];
-    }
-
-   // FHandle* handle = load -> OpenWrite("/home/wall/data/updateMessage", false);
-   // cJSON *root;
-   // root = cJSON_CreateArray();
-   // for(int i = 0; i < 2000; i++){
-   //    FString s = to_string(i);
-   //    cJSON_AddItemToArray(root, cJSON_CreateString(s.GetStr().c_str()));
-   //    cJSON_AddItemToArray(root, cJSON_CreateString("500data.pak"));
-   //    cJSON_AddItemToArray(root, cJSON_CreateString("md5"));
-   //    cJSON_AddItemToArray(root, cJSON_CreateNumber(i % 500));
-   //    cJSON_AddItemToArray(root, cJSON_CreateNumber(500 - (i % 500)));
-   //    cJSON_AddItemToArray(root, cJSON_CreateNumber(0));
-   // }
-
-   // char * p = cJSON_PrintUnformatted(root);
-   // int64 size = strlen(p);
-   // handle -> Write((uint8*)p, size);
-
+   end = clock();
+   cout << "the time is " << (double)(end -start)/CLOCKS_PER_SEC << " s" << endl;
    // FInternetLoader intLoader;
    // FHandle* handle = intLoader.OpenRead("updateMessage");
    // char p [72019];
@@ -96,6 +93,49 @@ int main(){
    //    writeSize += copySize;
    // }
 
+/**
+ * create test data
+ */
+   // srand((unsigned)time(NULL));
+   // FHandle* dataHandle = load -> OpenWrite("/root/data/updateData", false);
+   // FHandle* MessageHandle = load -> OpenWrite("/root/data/updateMessage", false);
+   // cJSON *root;
+   // root = cJSON_CreateArray();
+   // int64 offset = 0;
+   // for(int i = 0; i < 500; i++){
+   //    int64 filesize = rand() % (512 * 1024) + 1024 * 1024;
+   //    char data[filesize];
+   //    for(int j = 0; j < filesize; j++){
+   //       data[j] = '0' + (j % 10);
+   //    }
+
+   //    uint8 result[16];
+   //    MD5_CTX md5;
+   //    MD5Init(&md5);
+   //    MD5Update(&md5, (uint8*)data, filesize);
+   //    MD5Final(&md5, result);
+   //    char re[17];
+   //    memcpy((char*)re, (char*)result, 16);
+   //    re[16] = '\0';
+   //    FString md5Str = re;
+   //    DEBUG(md5Str.GetStr());
+   //    FString s = to_string(i);
+   //    cJSON_AddItemToArray(root, cJSON_CreateString(s.GetStr().c_str()));
+   //    cJSON_AddItemToArray(root, cJSON_CreateString("updateData"));
+   //    cJSON_AddItemToArray(root, cJSON_CreateString(md5Str.GetStr().c_str()));
+   //    cJSON_AddItemToArray(root, cJSON_CreateNumber(offset));
+   //    cJSON_AddItemToArray(root, cJSON_CreateNumber(filesize));
+   //    cJSON_AddItemToArray(root, cJSON_CreateNumber(0));
+
+   //    dataHandle -> Write((uint8*)data, filesize);
+
+   //    offset += filesize;
+   // }
+
+   // char * p = cJSON_PrintUnformatted(root);
+   // DEBUG(p);
+   // int64 size = strlen(p);
+   // MessageHandle -> Write((uint8*)p, size);
 
    // char* p  = "[\"1\", "",\"md4\", 53, 123]";
    // cJSON* root;

@@ -2,6 +2,7 @@
 #define FILELOADERTYPESH
 
 #define INTERNET_IP             "http://162.219.126.98:8001"
+// #define INTERNET_IP "http://127.0.0.1:8001"
 #define PAKLOADER_DIRECTORY     "/home/wall/data/"
 #define PAK_EXTENSION           ".pak"
 
@@ -16,11 +17,11 @@ typedef signed long    int64;
 
 
 enum{
-    DefaultBufferSize = 10240,
+    DefaultBufferSize = 2048000,
 };
 
 enum{
-    HttpRequestLength = 1024,  
+    HttpRequestLength = 102400,  
 };
 
 enum{

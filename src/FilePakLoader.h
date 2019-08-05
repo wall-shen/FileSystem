@@ -178,7 +178,7 @@ class FPakHandle : public FHandle{
 private:
     FHandle* physicalHandle;
     int64 entrySize;
-    const PakFile& pakFile;
+    PakFile& pakFile;
     PakEntry& pakEntry;
     uint32 blockListIndex;
     uint8* data;
@@ -190,6 +190,7 @@ public:
     virtual bool SeekFromEnd(int64 newPosition);
     virtual bool Flush();
     virtual bool Close();
+    bool CompareMd5();
     virtual ~FPakHandle();
 };
 
@@ -274,6 +275,8 @@ public:
     bool CreatFile(const char* pakName);
 
     int64 Compare(const char* fileName, FString md5, int64 size);
+
+    bool ReSize(const char* pakName);
 
     int64 CreateEntry(const char* fileName, int64 compressSize, int64 unCompressSize, uint32 compressMethod, FString md5);
     
