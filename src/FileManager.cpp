@@ -153,85 +153,20 @@ void DownloadTask::operator()(){
     /**
      * Normal version
      */
-    if(buffer == nullptr){
-        buffer = new uint8[bufferSize];
-    }
-    if(writeHandle == nullptr){
-        FPakLoader* pakLoader = FPakLoader::GetFPakLoader();
-        writeHandle  = pakLoader -> OpenWrite(mOutFileName.GetStr().c_str());
-        if(writeHandle)
-            writeHandle -> Seek(mPos);
-    }
-    if(readHandle == nullptr){
-        FInternetLoader intLoader;
-        readHandle = intLoader.OpenRead(mInFileName.GetStr().c_str());
-        if(readHandle)
-            readHandle -> Seek(mOffset);
-    }
-    int32 copySize = 0;
-    int64 leftToWrite = size;
-    while(leftToWrite > 0){
-        if(bufferSize - copySize < HttpRequestLength){
-            int64 writeSize = writeHandle -> Write(buffer , copySize);
-            if(writeSize != copySize){
-                DEBUG("DownladTask operator() write Failed");
-                return;
-            }
-            copySize = 0;
-        }
-
-        int64 readSize = 0;
-        if(leftToWrite < HttpRequestLength){
-            readSize = readHandle -> Read(buffer + copySize, leftToWrite);
-            if(readSize != leftToWrite){
-                DEBUG("DownladTask operator() read leftToWrite Failed");
-                return;
-            }
-            
-        }
-        else{
-            readSize = readHandle -> Read(buffer + copySize , HttpRequestLength);
-            if(readSize != HttpRequestLength){
-                DEBUG("DownladTask operator() read HttpRequestLength Failed");
-                return;
-            }
-        }
-        copySize += readSize;
-        leftToWrite -= readSize;
-    }
-    if(copySize != 0){
-        int64 writeSize = writeHandle -> Write(buffer , copySize);
-            if(writeSize != copySize){
-                DEBUG("DownladTask operator() write Failed");
-                return;
-            }
-        copySize = 0;
-    }
-
-
-
-
-    /**
-     *  download and combine version
-     */
-    // FString DefalultDir = "/home/wall/data/temp/";
     // if(buffer == nullptr){
     //     buffer = new uint8[bufferSize];
     // }
     // if(writeHandle == nullptr){
-    //     FLinuxLoader* phyLoader = FLinuxLoader::GetFLinuxLoader();
-    //     mOutFileName = DefalultDir + mOutFileName + ".downloading";
-    //     writeHandle  = phyLoader -> OpenWrite(mOutFileName.GetStr().c_str(), false);
-    //     if(!writeHandle)
-    //         return;
+    //     FPakLoader* pakLoader = FPakLoader::GetFPakLoader();
+    //     writeHandle  = pakLoader -> OpenWrite(mOutFileName.GetStr().c_str());
+    //     if(writeHandle)
+    //         writeHandle -> Seek(mPos);
     // }
     // if(readHandle == nullptr){
     //     FInternetLoader intLoader;
     //     readHandle = intLoader.OpenRead(mInFileName.GetStr().c_str());
     //     if(readHandle)
     //         readHandle -> Seek(mOffset);
-    //     else
-    //         return;
     // }
     // int32 copySize = 0;
     // int64 leftToWrite = size;
@@ -272,6 +207,70 @@ void DownloadTask::operator()(){
     //         }
     //     copySize = 0;
     // }
+
+
+
+
+    /**
+     *  download and combine version
+     */
+    FString DefalultDir = "/home/wall/data/temp/";
+    if(buffer == nullptr){
+        buffer = new uint8[bufferSize];
+    }
+    if(writeHandle == nullptr){
+        FLinuxLoader* phyLoader = FLinuxLoader::GetFLinuxLoader();
+        mOutFileName = DefalultDir + mOutFileName + ".downloading";
+        writeHandle  = phyLoader -> OpenWrite(mOutFileName.GetStr().c_str(), false);
+        if(!writeHandle)
+            return;
+    }
+    if(readHandle == nullptr){
+        FInternetLoader intLoader;
+        readHandle = intLoader.OpenRead(mInFileName.GetStr().c_str());
+        if(readHandle)
+            readHandle -> Seek(mOffset);
+        else
+            return;
+    }
+    int32 copySize = 0;
+    int64 leftToWrite = size;
+    while(leftToWrite > 0){
+        if(bufferSize - copySize < HttpRequestLength){
+            int64 writeSize = writeHandle -> Write(buffer , copySize);
+            if(writeSize != copySize){
+                DEBUG("DownladTask operator() write Failed");
+                return;
+            }
+            copySize = 0;
+        }
+
+        int64 readSize = 0;
+        if(leftToWrite < HttpRequestLength){
+            readSize = readHandle -> Read(buffer + copySize, leftToWrite);
+            if(readSize != leftToWrite){
+                DEBUG("DownladTask operator() read leftToWrite Failed");
+                return;
+            }          
+        }
+        else{
+            readSize = readHandle -> Read(buffer + copySize , HttpRequestLength);
+            if(readSize != HttpRequestLength){
+                DEBUG("DownladTask operator() read HttpRequestLength Failed");
+                return;
+            }
+        }
+        copySize += readSize;
+        leftToWrite -= readSize;
+    }
+    if(copySize != 0){
+        int64 writeSize = writeHandle -> Write(buffer , copySize);
+            if(writeSize != copySize){
+                DEBUG("DownladTask operator() write Failed");
+                return;
+            }
+        copySize = 0;
+    }
 }
 
 class TaskInfo{

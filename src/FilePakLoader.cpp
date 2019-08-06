@@ -951,10 +951,11 @@ void Combine(){
         DEBUG("combine opendir failed");
         return;
     }
-
+    int count = 0;
     while((entry = readdir(pDir)) != nullptr){
         FString fileName = entry -> d_name;
         if(fileName.EndWith("downloading")){
+            count ++;
             FLinuxLoader* phyLoader = FLinuxLoader::GetFLinuxLoader();
             FPakLoader* pakLoader = FPakLoader::GetFPakLoader();
 
@@ -967,6 +968,7 @@ void Combine(){
                 DEBUG("combine read failed");
                 return;
             }
+            DEBUG(targetPath.GetStr() << " has read " << readSize << " byte");
 
             FString pakName = fileName.GetFileNameWithoutExtension();
             FHandle* writeHandle = pakLoader -> OpenWrite(pakName.GetStr().c_str());
@@ -976,8 +978,13 @@ void Combine(){
                 return;
             }
 
+            DEBUG(targetPath.GetStr() << " has write " << writeSize << " byte");
+            writeHandle -> Flush();
             delete writeHandle;
             delete readHandle;
+
+        
         }
     }
+    DEBUG("total read " << count << " file");
 }

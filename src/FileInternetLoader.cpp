@@ -84,6 +84,12 @@ int64 FInternetHandle::Read(uint8* inBuffer, int64 bytesToRead){
     curl_easy_setopt(curl, CURLOPT_URL, url.GetStr().c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, readFromData);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &chunk);
+    // setup keep-alive
+    curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
+    // keep-alive idle time to 120 seconds */
+    curl_easy_setopt(curl, CURLOPT_TCP_KEEPIDLE, 120L);
+    // interval time between keep-alive probes: 60 seconds */
+    curl_easy_setopt(curl, CURLOPT_TCP_KEEPINTVL, 60L);
 
     curl_easy_perform(curl);
     long retCode = 0;

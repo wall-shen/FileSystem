@@ -24,25 +24,6 @@ int main(){
    /**
     * write direct demo
     */
-   FLinuxLoader* load = FLinuxLoader::GetFLinuxLoader();
-   timeval timeStart, timeEnd;
-   gettimeofday(&timeStart, NULL);
-
-   FPakLoader* pakLoader = FPakLoader::GetFPakLoader();
-   pakLoader -> CreatePak("/home/wall/data/test.pak");
-   FManager manager;
-   manager.Update();
-   gettimeofday(&timeEnd, NULL);
-   double costTime = (timeEnd.tv_sec-timeStart.tv_sec) + (timeEnd.tv_usec-timeStart.tv_usec)/1000000.0;
-
-   // for(int i = 0; i < pakLoader -> pakFiles.Size(); i++){
-   //    pakLoader -> pakFiles[i].Print();
-   // }
-   DEBUG("Download cost time " << costTime << "s");
-
-   /**
-    * write test demo
-    */
    // FLinuxLoader* load = FLinuxLoader::GetFLinuxLoader();
    // timeval timeStart, timeEnd;
    // gettimeofday(&timeStart, NULL);
@@ -53,17 +34,42 @@ int main(){
    // manager.Update();
    // gettimeofday(&timeEnd, NULL);
    // double costTime = (timeEnd.tv_sec-timeStart.tv_sec) + (timeEnd.tv_usec-timeStart.tv_usec)/1000000.0;
-   // DEBUG("Download cost time " << costTime << "s");
-   // gettimeofday(&timeStart, NULL);
-   // Combine();
 
    // // for(int i = 0; i < pakLoader -> pakFiles.Size(); i++){
    // //    pakLoader -> pakFiles[i].Print();
    // // }
-   // gettimeofday(&timeEnd, NULL);
-   // costTime = (timeEnd.tv_sec-timeStart.tv_sec) + (timeEnd.tv_usec-timeStart.tv_usec)/1000000.0;
-   // DEBUG("Write cost time " << costTime << "s");
+   // DEBUG("Download cost time " << costTime << "s");
 
+   /**
+    * write test demo
+    */
+   FLinuxLoader* load = FLinuxLoader::GetFLinuxLoader();
+   timeval timeStart, timeEnd;
+   gettimeofday(&timeStart, NULL);
+
+   FPakLoader* pakLoader = FPakLoader::GetFPakLoader();
+   pakLoader -> CreatePak("/home/wall/data/test.pak");
+   FManager manager;
+   manager.Update();
+   gettimeofday(&timeEnd, NULL);
+   double costTime1 = (timeEnd.tv_sec-timeStart.tv_sec) + (timeEnd.tv_usec-timeStart.tv_usec)/1000000.0;
+
+   gettimeofday(&timeStart, NULL);
+   Combine();
+
+   gettimeofday(&timeEnd, NULL);
+   double costTime = (timeEnd.tv_sec-timeStart.tv_sec) + (timeEnd.tv_usec-timeStart.tv_usec)/1000000.0;
+   DEBUG("Download cost time " << costTime1 << "s");
+   DEBUG("Write cost time " << costTime << "s");
+
+   FHandle* rHandle = pakLoader -> OpenRead("399");
+   int64 readSize= pakLoader-> FileSize("399");
+   cout << readSize << endl;
+   char p[readSize];
+    rHandle -> Read((uint8*)p, readSize);
+    for(int i = readSize - 500 ; i < readSize; i++){
+       cout << p[i];
+    }
 
       /**
     * MD5 test

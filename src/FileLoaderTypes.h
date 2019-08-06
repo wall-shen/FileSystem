@@ -22,7 +22,7 @@ enum{
 };
 
 enum{
-    HttpRequestLength = 102400,  
+    HttpRequestLength = 512000,  
 };
 
 enum{
