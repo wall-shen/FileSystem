@@ -112,7 +112,7 @@ void FWriteArchive::Serialize(void* pValue, int64 length){
     // else{
     //     int64 copySize;
     //     while(length > (copySize = bufferSize - bufferCount)){
-    //         memcpy(buffer, pValue, copySize);
+    //         memcpy(buffer + bufferCount, pValue, copySize);
     //         bufferCount += copySize;
     //         pValue = (uint8*)pValue + copySize;
     //         length -= copySize;

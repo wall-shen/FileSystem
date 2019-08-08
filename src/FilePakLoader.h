@@ -81,7 +81,7 @@ public:
     uint32 hashTwo;
     uint64 compressSize;
     FString md5;
-    uint64 uncompressSize;
+    uint64 uncompressSize;  // deprecated
     uint32 compressMethod;
     BlockList blockList;
     uint64 maxBlockSize;
@@ -154,8 +154,8 @@ public:
     int64 GetSize() { return size; }
     PakIndex& GetIndex() { return index; }
     bool Remove(const char* fileName);
-    int64 Read(FHandle* handle, PakEntry&, uint8* inBuffer);
-    int64 Write(FHandle* handle, const char* fileName, const uint8* outBrffer, int64 bytesToWrite, FString md5);
+    int64 Read(FHandle* handle, PakEntry&, uint8* inBuffer);    // deprecated
+    int64 Write(FHandle* handle, const char* fileName, const uint8* outBrffer, int64 bytesToWrite, FString md5);    // deprecated
     int64 CreateFile(const char* fileName, int64 size, int64 uncompressSize, uint32 compressMethod, FString md5);
     void FindFiles(FArray<FString> foundfiles, const char* directory, const char* extension);
     void FindFilesRecursively(FArray<FString> foundfiles, const char* directory, const char* extension);
@@ -285,43 +285,5 @@ public:
 };
 
 void Combine();
-// void Combine(){
-//     FString dir = "/home/wall/data/temp/";
-//     DIR* pDir = opendir(dir.GetStr().c_str());
-//     dirent* entry;
 
-//     if(pDir == nullptr){
-//         DEBUG("combine opendir failed");
-//         return;
-//     }
-
-//     while((entry = readdir(pDir)) != nullptr){
-//         FString fileName = entry -> d_name;
-//         if(fileName.EndWith("downloading")){
-//             FLinuxLoader* phyLoader = FLinuxLoader::GetFLinuxLoader();
-//             FPakLoader* pakLoader = FPakLoader::GetFPakLoader();
-
-//             FString targetPath = dir + fileName;
-//             FHandle* readHandle = phyLoader -> OpenRead(targetPath.GetStr().c_str());
-//             int64 fileSize = phyLoader -> FileSize(targetPath.GetStr().c_str());
-//             uint8 data[fileSize];
-//             int64 readSize = readHandle -> Read(data, fileSize);
-//             if(readSize != fileSize){
-//                 DEBUG("combine read failed");
-//                 return;
-//             }
-
-//             FString pakName = fileName.GetFileNameWithoutExtension();
-//             FHandle* writeHandle = pakLoader -> OpenWrite(pakName.GetStr().c_str());
-//             int64 writeSize = writeHandle -> Write(data, fileSize);
-//             if(writeSize != fileSize){
-//                 DEBUG("combine write failed");
-//                 return;
-//             }
-
-//             delete writeHandle;
-//             delete readHandle;
-//         }
-//     }
-// }
 #endif

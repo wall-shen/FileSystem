@@ -160,6 +160,9 @@ bool PakFile::FindFile(const char* fileName, PakEntry& pakEntry){
     return false;
 }
 
+/**
+ * deprecated
+ */
 int64 PakFile::Read(FHandle* handle, PakEntry& pakEntry, uint8* inBuffer){
     int copySize = 0;
     uint64 unCompMaxSize = compressBound(pakEntry.uncompressSize);
@@ -209,6 +212,10 @@ bool PakFile::AddEntryToFiles(const char* fileName, uint64 compressSize, uint64 
     return true;
 }
 
+/**
+ * 
+ * deprecated
+ */
 int64 PakFile::Write(FHandle* handle, const char* fileName, const uint8* outBuffer, int64 bytesToWrite, FString md5){
     if(!handle || !fileName || !outBuffer || bytesToWrite < 0)
         return -1;
@@ -547,6 +554,26 @@ int64 FPakHandle::Read(uint8* inBuffer, int64 bytesToRead){
             }
         }
     }
+
+    if(pakEntry.compressMethod == 1){
+        int64 uncomSize = pakEntry.uncompressSize << 3;
+        while(true){
+            uint8* tempBuffer = new uint8[uncomSize];
+            uint64 truecompSize = uncomSize;
+            int32 err = uncompress(tempBuffer, &truecompSize, data, size);
+            if(err != Z_OK){
+                delete tempBuffer;
+                uncomSize <<= 1;
+                continue;
+            }
+            size = truecompSize;
+            delete data;
+            data = tempBuffer;
+            tempBuffer = nullptr;
+            break;
+        }
+    }
+
     if(!inBuffer || bytesToRead < 0)
         return -1;
     if(bytesToRead >= size - pos){
